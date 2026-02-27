@@ -5,26 +5,45 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import { PromptInput } from '@/components/shared/PromptInput';
 import { ModelSelector } from '@/components/shared/ModelSelector';
 import { GenerateButton } from '@/components/shared/GenerateButton';
+import { ImageDropZone } from '@/components/shared/ImageDropZone';
+import { SliderControl } from '@/components/shared/SliderControl';
 import { StylePresetPicker } from './StylePresetPicker';
 import { CanvasSizeSelector } from './CanvasSizeSelector';
 import { AdvancedImageControls } from './AdvancedImageControls';
 import { stylePresets } from '@/data/style-presets';
 import { canvasSizes } from '@/data/canvas-sizes';
 import { generatePollinationsImage } from '@/lib/api/pollinations';
-import { generateHfImage } from '@/lib/api/huggingface';
+import { generateHfImage, generateHfImageToImage } from '@/lib/api/huggingface';
+import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem, generateThumbnail } from '@/lib/db';
 import { randomSeed } from '@/lib/utils/seed';
 import { cn } from '@/lib/utils/cn';
 import { v4 as uuid } from 'uuid';
-import { Download, RefreshCw, Maximize2 } from 'lucide-react';
+import { Download, RefreshCw, Maximize2, Wand2, Upload } from 'lucide-react';
 import { downloadBlob } from '@/lib/utils/download';
 import toast from 'react-hot-toast';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { validateImageFile } from '@/lib/utils/image';
 
 export function ImagePanel() {
   const store = useImageStore();
   const { hfToken, pollinationsKey, nsfwEnabled } = useSettingsStore();
   const [fullscreen, setFullscreen] = useState(false);
+
+  const handleCanvasDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        toast.error(validation.error!);
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      store.setInputImage(url, file);
+    }
+  }, [store]);
 
   const handleGenerate = async () => {
     if (!store.prompt.trim()) {
@@ -63,22 +82,46 @@ export function ImagePanel() {
     try {
       let result: { url: string; blob: Blob };
 
-      if (store.provider === 'pollinations') {
-        result = await generatePollinationsImage(fullPrompt, {
-          model: store.model,
-          width: store.width,
-          height: store.height,
-          seed,
-        });
+      if (store.mode === 'image-to-image' && store.inputImageBlob) {
+        // Image-to-image generation
+        if (store.provider === 'pollinations') {
+          const imageDataUri = await blobToDataUri(store.inputImageBlob);
+          result = await generatePollinationsImage(fullPrompt, {
+            model: store.model,
+            width: store.width,
+            height: store.height,
+            seed,
+            image: imageDataUri,
+            negative_prompt: effectiveNegative || undefined,
+          });
+        } else {
+          result = await generateHfImageToImage(fullPrompt, store.inputImageBlob, hfToken, {
+            model: store.model,
+            negativePrompt: effectiveNegative,
+            strength: store.strength,
+            guidanceScale: store.cfgScale,
+            numInferenceSteps: store.steps,
+          });
+        }
       } else {
-        result = await generateHfImage(fullPrompt, hfToken, {
-          model: store.model,
-          negativePrompt: effectiveNegative,
-          width: store.width,
-          height: store.height,
-          guidanceScale: store.cfgScale,
-          numInferenceSteps: store.steps,
-        });
+        // Text-to-image generation (original logic)
+        if (store.provider === 'pollinations') {
+          result = await generatePollinationsImage(fullPrompt, {
+            model: store.model,
+            width: store.width,
+            height: store.height,
+            seed,
+          });
+        } else {
+          result = await generateHfImage(fullPrompt, hfToken, {
+            model: store.model,
+            negativePrompt: effectiveNegative,
+            width: store.width,
+            height: store.height,
+            guidanceScale: store.cfgScale,
+            numInferenceSteps: store.steps,
+          });
+        }
       }
 
       store.setGeneratedImageUrl(result.url);
@@ -105,9 +148,11 @@ export function ImagePanel() {
           steps: store.steps,
           sampler: store.sampler,
           seed,
+          strength: store.mode === 'image-to-image' ? store.strength : undefined,
         },
         outputBlob: result.blob,
         thumbnail,
+        inputImageBlob: store.mode === 'image-to-image' ? store.inputImageBlob ?? undefined : undefined,
         createdAt: Date.now(),
         durationMs: Date.now() - startTime,
         isFavorite: false,
@@ -134,6 +179,38 @@ export function ImagePanel() {
     <div className="flex flex-col lg:flex-row gap-6 h-full">
       {/* Controls Panel */}
       <div className="lg:w-80 xl:w-96 space-y-4 lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)]">
+        {/* Mode indicator */}
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            'text-xs font-medium px-2 py-0.5 rounded-full',
+            store.mode === 'image-to-image'
+              ? 'bg-accent/15 text-accent'
+              : 'bg-surface-hover text-muted'
+          )}>
+            {store.mode === 'image-to-image' ? 'Image-to-Image' : 'Text-to-Image'}
+          </span>
+        </div>
+
+        {/* Image Drop Zone */}
+        <ImageDropZone
+          imageUrl={store.inputImageUrl}
+          onImageSet={(url, blob) => store.setInputImage(url, blob)}
+          onImageClear={() => store.clearInputImage()}
+          disabled={store.isGenerating}
+        />
+
+        {/* Strength slider (img2img only) */}
+        {store.mode === 'image-to-image' && (
+          <SliderControl
+            label="Strength"
+            value={store.strength}
+            onChange={store.setStrength}
+            min={0}
+            max={1}
+            step={0.05}
+          />
+        )}
+
         {/* Prompt */}
         <PromptInput
           value={store.prompt}
@@ -151,6 +228,11 @@ export function ImagePanel() {
             store.setModel(model);
             store.setProvider(provider);
           }}
+          requiredCapability={
+            store.mode === 'image-to-image' && store.provider === 'pollinations'
+              ? 'supportsImageInput'
+              : undefined
+          }
         />
 
         {/* Style Presets */}
@@ -191,6 +273,7 @@ export function ImagePanel() {
           onClick={handleGenerate}
           isGenerating={store.isGenerating}
           disabled={!store.prompt.trim()}
+          label={store.mode === 'image-to-image' ? 'Edit Image' : 'Generate'}
         />
       </div>
 
@@ -225,6 +308,13 @@ export function ImagePanel() {
                   <Maximize2 className="w-4 h-4" />
                 </button>
                 <button
+                  onClick={() => store.refineCurrentImage()}
+                  className="p-2 rounded-lg bg-black/50 text-white hover:bg-accent/70 transition-colors"
+                  title="Refine this image"
+                >
+                  <Wand2 className="w-4 h-4" />
+                </button>
+                <button
                   onClick={handleGenerate}
                   className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
                   title="Regenerate"
@@ -236,17 +326,21 @@ export function ImagePanel() {
           ) : store.isGenerating ? (
             <div className="text-center space-y-3">
               <div className="w-16 h-16 border-4 border-accent/30 border-t-accent rounded-full animate-spin mx-auto" />
-              <p className="text-sm text-muted">Generating image...</p>
+              <p className="text-sm text-muted">
+                {store.mode === 'image-to-image' ? 'Editing image...' : 'Generating image...'}
+              </p>
             </div>
           ) : (
-            <div className="text-center space-y-2 text-muted">
+            <div
+              className="text-center space-y-2 text-muted w-full h-full flex flex-col items-center justify-center"
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={handleCanvasDrop}
+            >
               <div className="w-20 h-20 rounded-xl bg-surface-hover flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                </svg>
+                <Upload className="w-8 h-8" />
               </div>
               <p className="text-sm">Enter a prompt and click Generate</p>
-              <p className="text-xs">Press Enter to generate</p>
+              <p className="text-xs">Drop an image here to edit it, or press Enter to generate</p>
             </div>
           )}
 

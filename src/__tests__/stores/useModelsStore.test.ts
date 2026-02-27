@@ -59,6 +59,51 @@ describe('useModelsStore', () => {
     });
   });
 
+  describe('models with capabilities', () => {
+    it('stores models with capabilities correctly', () => {
+      const modelsWithCaps = [
+        {
+          id: 'kontext',
+          name: 'Kontext',
+          provider: 'pollinations' as const,
+          type: 'image' as const,
+          capabilities: { supportsImageInput: true },
+        },
+        {
+          id: 'flux',
+          name: 'FLUX',
+          provider: 'pollinations' as const,
+          type: 'image' as const,
+        },
+      ];
+      getState().setImageModels(modelsWithCaps);
+      const stored = getState().imageModels;
+      expect(stored[0].capabilities?.supportsImageInput).toBe(true);
+      expect(stored[1].capabilities).toBeUndefined();
+    });
+
+    it('stores video models with full capabilities', () => {
+      const videoModels = [
+        {
+          id: 'wan',
+          name: 'Wan',
+          provider: 'pollinations' as const,
+          type: 'video' as const,
+          capabilities: {
+            supportsVideoOutput: true,
+            supportsImageToVideo: true,
+            supportedVideoParams: { duration: true, aspectRatio: true, audio: true },
+          },
+        },
+      ];
+      getState().setVideoModels(videoModels);
+      const stored = getState().videoModels;
+      expect(stored[0].capabilities?.supportsVideoOutput).toBe(true);
+      expect(stored[0].capabilities?.supportsImageToVideo).toBe(true);
+      expect(stored[0].capabilities?.supportedVideoParams?.duration).toBe(true);
+    });
+  });
+
   describe('setIsLoading', () => {
     it('sets loading state', () => {
       getState().setIsLoading(true);

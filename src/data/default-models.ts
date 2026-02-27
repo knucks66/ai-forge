@@ -7,6 +7,15 @@ export const defaultImageModels: ModelOption[] = [
   { id: 'flux-3d', name: 'FLUX 3D', provider: 'pollinations', type: 'image', tags: ['3d'] },
   { id: 'flux-cablyai', name: 'FLUX CablyAI', provider: 'pollinations', type: 'image', tags: ['artistic'] },
   { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image', tags: ['fast'] },
+  { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', tags: ['editing'], capabilities: { supportsImageInput: true } },
+  { id: 'klein', name: 'Klein', provider: 'pollinations', type: 'image', tags: ['editing'], capabilities: { supportsImageInput: true } },
+  { id: 'klein-large', name: 'Klein Large', provider: 'pollinations', type: 'image', tags: ['editing', 'large'], capabilities: { supportsImageInput: true } },
+  { id: 'gptimage', name: 'GPT Image', provider: 'pollinations', type: 'image', tags: ['openai'], capabilities: { supportsImageInput: true } },
+  { id: 'gptimage-large', name: 'GPT Image Large', provider: 'pollinations', type: 'image', tags: ['openai', 'large'], capabilities: { supportsImageInput: true } },
+  { id: 'seedream', name: 'Seedream', provider: 'pollinations', type: 'image', tags: ['creative'], capabilities: { supportsImageInput: true } },
+  { id: 'seedream-pro', name: 'Seedream Pro', provider: 'pollinations', type: 'image', tags: ['creative', 'pro'], capabilities: { supportsImageInput: true } },
+  { id: 'nanobanana', name: 'NanoBanana', provider: 'pollinations', type: 'image', tags: ['fast'], capabilities: { supportsImageInput: true } },
+  { id: 'nanobanana-pro', name: 'NanoBanana Pro', provider: 'pollinations', type: 'image', tags: ['fast', 'pro'], capabilities: { supportsImageInput: true } },
   { id: 'stabilityai/stable-diffusion-xl-base-1.0', name: 'SDXL 1.0', provider: 'huggingface', type: 'image', tags: ['stable-diffusion'] },
   { id: 'stabilityai/stable-diffusion-3-medium-diffusers', name: 'SD 3 Medium', provider: 'huggingface', type: 'image', tags: ['stable-diffusion'] },
   { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', provider: 'huggingface', type: 'image', tags: ['flux'] },
@@ -31,5 +40,11 @@ export const defaultAudioModels: ModelOption[] = [
 ];
 
 export const defaultVideoModels: ModelOption[] = [
-  { id: 'ali-vilab/text-to-video-ms-1.7b', name: 'Text-to-Video 1.7B', provider: 'huggingface', type: 'video', tags: ['experimental'] },
+  { id: 'wan', name: 'Wan', provider: 'pollinations', type: 'video', tags: ['pollinations'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'seedance', name: 'Seedance', provider: 'pollinations', type: 'video', tags: ['pollinations'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'seedance-pro', name: 'Seedance Pro', provider: 'pollinations', type: 'video', tags: ['pollinations', 'pro'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'veo', name: 'Veo', provider: 'pollinations', type: 'video', tags: ['pollinations', 'google'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'grok-video', name: 'Grok Video', provider: 'pollinations', type: 'video', tags: ['pollinations', 'xai'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'ltx-2', name: 'LTX-2', provider: 'pollinations', type: 'video', tags: ['pollinations'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
+  { id: 'ali-vilab/text-to-video-ms-1.7b', name: 'Text-to-Video 1.7B', provider: 'huggingface', type: 'video', tags: ['experimental'], capabilities: { supportsVideoOutput: true } },
 ];

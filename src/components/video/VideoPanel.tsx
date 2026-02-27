@@ -5,7 +5,11 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import { PromptInput } from '@/components/shared/PromptInput';
 import { ModelSelector } from '@/components/shared/ModelSelector';
 import { GenerateButton } from '@/components/shared/GenerateButton';
-import { generateHfVideo } from '@/lib/api/huggingface';
+import { ImageDropZone } from '@/components/shared/ImageDropZone';
+import { SliderControl } from '@/components/shared/SliderControl';
+import { generateHfVideo, generateHfImageToVideo } from '@/lib/api/huggingface';
+import { generatePollinationsVideo } from '@/lib/api/pollinations';
+import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem } from '@/lib/db';
 import { downloadBlob } from '@/lib/utils/download';
 import { v4 as uuid } from 'uuid';
@@ -23,7 +27,7 @@ export function VideoPanel() {
       return;
     }
 
-    if (!hfToken) {
+    if (store.provider === 'huggingface' && !hfToken) {
       toast.error('HuggingFace token required for video generation. Add it in Settings.');
       return;
     }
@@ -36,15 +40,44 @@ export function VideoPanel() {
 
     const startTime = Date.now();
 
-    // Progress simulation (since we can't get real progress from HF API)
-    // Use getState() to read the current progress value since setProgress expects a number
+    // Progress simulation
     const progressInterval = setInterval(() => {
       const current = useVideoStore.getState().progress;
       useVideoStore.getState().setProgress(Math.min(current + 1, 95));
     }, 3000);
 
     try {
-      const result = await generateHfVideo(store.prompt, hfToken, store.model);
+      let result: { url: string; blob: Blob };
+
+      if (store.provider === 'pollinations') {
+        // Pollinations video generation
+        const options: {
+          model?: string;
+          duration?: number;
+          aspectRatio?: string;
+          audio?: boolean;
+          image?: string;
+        } = {
+          model: store.model,
+          duration: store.duration,
+          aspectRatio: store.aspectRatio,
+          audio: store.audio,
+        };
+
+        if (store.mode === 'image-to-video' && store.inputImageBlob) {
+          options.image = await blobToDataUri(store.inputImageBlob);
+        }
+
+        result = await generatePollinationsVideo(store.prompt, options);
+      } else {
+        // HuggingFace video generation
+        if (store.mode === 'image-to-video' && store.inputImageBlob) {
+          result = await generateHfImageToVideo(store.prompt, store.inputImageBlob, hfToken, store.model);
+        } else {
+          result = await generateHfVideo(store.prompt, hfToken, store.model);
+        }
+      }
+
       store.setVideoUrl(result.url);
       store.setVideoBlob(result.blob);
       store.setProgress(100);
@@ -53,16 +86,20 @@ export function VideoPanel() {
       await saveGalleryItem({
         id: uuid(),
         type: 'video',
-        provider: 'huggingface',
+        provider: store.provider,
         modelId: store.model,
         prompt: store.prompt,
         fullPrompt: store.prompt,
         params: {
           prompt: store.prompt,
           model: store.model,
-          provider: 'huggingface',
+          provider: store.provider,
+          duration: store.provider === 'pollinations' ? store.duration : undefined,
+          aspectRatio: store.provider === 'pollinations' ? store.aspectRatio : undefined,
+          audio: store.provider === 'pollinations' ? store.audio : undefined,
         },
         outputBlob: result.blob,
+        inputImageBlob: store.mode === 'image-to-video' ? store.inputImageBlob ?? undefined : undefined,
         createdAt: Date.now(),
         durationMs: Date.now() - startTime,
         isFavorite: false,
@@ -86,6 +123,8 @@ export function VideoPanel() {
     }
   };
 
+  const needsHfToken = store.provider === 'huggingface' && !hfToken;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Experimental warning */}
@@ -94,9 +133,35 @@ export function VideoPanel() {
         <div>
           <p className="text-sm font-medium text-yellow-400">Experimental Feature</p>
           <p className="text-xs text-muted mt-1">
-            Video generation uses HuggingFace models and may take several minutes. Results vary by model and may have limited quality. A HuggingFace token is required.
+            Video generation may take several minutes. Results vary by model and may have limited quality. HuggingFace models require a token.
           </p>
         </div>
+      </div>
+
+      {/* Mode Toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { store.setMode('text-to-video'); store.clearInputImage(); }}
+          className={cn(
+            'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+            store.mode === 'text-to-video'
+              ? 'bg-accent/15 text-accent'
+              : 'bg-surface-hover text-muted hover:text-foreground'
+          )}
+        >
+          Text to Video
+        </button>
+        <button
+          onClick={() => store.setMode('image-to-video')}
+          className={cn(
+            'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+            store.mode === 'image-to-video'
+              ? 'bg-accent/15 text-accent'
+              : 'bg-surface-hover text-muted hover:text-foreground'
+          )}
+        >
+          Image to Video
+        </button>
       </div>
 
       {/* Controls */}
@@ -111,17 +176,81 @@ export function VideoPanel() {
             showEnhance={false}
           />
 
+          {/* Image drop zone for i2v mode */}
+          {store.mode === 'image-to-video' && (
+            <ImageDropZone
+              imageUrl={store.inputImageUrl}
+              onImageSet={(url, blob) => store.setInputImage(url, blob)}
+              onImageClear={() => store.clearInputImage()}
+              disabled={store.isGenerating}
+              label="Source Image"
+              compact
+            />
+          )}
+
           <ModelSelector
             type="video"
             selectedModel={store.model}
-            selectedProvider="huggingface"
-            onSelect={(model) => store.setModel(model)}
+            selectedProvider={store.provider}
+            onSelect={(model, provider) => {
+              store.setModel(model);
+              store.setProvider(provider);
+            }}
+            requiredCapability={
+              store.mode === 'image-to-video' ? 'supportsImageToVideo' : undefined
+            }
           />
+
+          {/* Video params (Pollinations only) */}
+          {store.provider === 'pollinations' && (
+            <div className="space-y-3 p-3 bg-surface/50 rounded-lg border border-border">
+              <p className="text-xs font-medium text-muted">Video Parameters</p>
+
+              <SliderControl
+                label="Duration (seconds)"
+                value={store.duration}
+                onChange={store.setDuration}
+                min={1}
+                max={10}
+                step={1}
+              />
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted">Aspect Ratio</label>
+                <div className="flex gap-2">
+                  {(['16:9', '9:16', '1:1'] as const).map((ratio) => (
+                    <button
+                      key={ratio}
+                      onClick={() => store.setAspectRatio(ratio)}
+                      className={cn(
+                        'px-2.5 py-1 rounded text-xs font-medium transition-colors',
+                        store.aspectRatio === ratio
+                          ? 'bg-accent/15 text-accent'
+                          : 'bg-surface-hover text-muted hover:text-foreground'
+                      )}
+                    >
+                      {ratio}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={store.audio}
+                  onChange={(e) => store.setAudio(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-border accent-accent"
+                />
+                <span className="text-xs text-muted">Include audio</span>
+              </label>
+            </div>
+          )}
 
           <GenerateButton
             onClick={handleGenerate}
             isGenerating={store.isGenerating}
-            disabled={!store.prompt.trim() || !hfToken}
+            disabled={!store.prompt.trim() || needsHfToken}
             label="Generate Video"
             loadingLabel="Generating Video..."
           />
@@ -176,7 +305,9 @@ export function VideoPanel() {
             <div className="text-center space-y-2 text-muted p-4">
               <Film className="w-12 h-12 mx-auto opacity-50" />
               <p className="text-sm">Enter a prompt to generate a video</p>
-              <p className="text-xs">Requires a HuggingFace token</p>
+              {needsHfToken && store.provider === 'huggingface' && (
+                <p className="text-xs">Requires a HuggingFace token</p>
+              )}
             </div>
           )}
 

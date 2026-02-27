@@ -8,6 +8,7 @@ import { fetchHfModels } from '@/lib/api/huggingface';
 import { ModelOption } from '@/types/models';
 import { defaultImageModels, defaultTextModels, defaultAudioModels, defaultVideoModels } from '@/data/default-models';
 import { GenerationType } from '@/types/generation';
+import { getPollinationsCapabilities, getHfCapabilities, POLLINATIONS_VIDEO_MODELS } from '@/data/model-capabilities';
 
 /**
  * Hook that auto-fetches models from Pollinations and HuggingFace APIs.
@@ -39,31 +40,56 @@ export function useModels() {
         fetchHfModels('text-to-video', hfToken || undefined),
       ]);
 
-      // Process image models
+      // Process image models + separate video models from Pollinations
       const imageModels: ModelOption[] = [];
+      const pollinationsVideoModels: ModelOption[] = [];
+
       if (pollinationsImageModels.status === 'fulfilled' && pollinationsImageModels.value.length > 0) {
-        imageModels.push(
-          ...pollinationsImageModels.value.map((id: string) => ({
-            id,
-            name: formatModelName(id),
-            provider: 'pollinations' as const,
-            type: 'image' as const,
-            tags: [],
-          }))
-        );
+        for (const modelInfo of pollinationsImageModels.value) {
+          const caps = getPollinationsCapabilities(modelInfo.id, {
+            type: modelInfo.type,
+            capabilities: modelInfo.capabilities,
+          });
+
+          // Separate video models from image models
+          if (POLLINATIONS_VIDEO_MODELS.has(modelInfo.id) || modelInfo.type === 'video') {
+            pollinationsVideoModels.push({
+              id: modelInfo.id,
+              name: modelInfo.name || formatModelName(modelInfo.id),
+              provider: 'pollinations',
+              type: 'video',
+              tags: [],
+              capabilities: caps,
+            });
+          } else {
+            imageModels.push({
+              id: modelInfo.id,
+              name: modelInfo.name || formatModelName(modelInfo.id),
+              provider: 'pollinations',
+              type: 'image',
+              tags: [],
+              capabilities: Object.keys(caps).length > 0 ? caps : undefined,
+            });
+          }
+        }
       } else {
         imageModels.push(...defaultImageModels.filter((m) => m.provider === 'pollinations'));
       }
+
       if (hfImageModels.status === 'fulfilled' && hfImageModels.value.length > 0) {
         imageModels.push(
-          ...hfImageModels.value.map((m) => ({
-            id: m.id,
-            name: m.name || m.id.split('/').pop() || m.id,
-            provider: 'huggingface' as const,
-            type: 'image' as const,
-            description: m.description,
-            tags: m.tags as string[] | undefined,
-          }))
+          ...hfImageModels.value.map((m) => {
+            const caps = getHfCapabilities(m.id, 'text-to-image');
+            return {
+              id: m.id,
+              name: m.name || m.id.split('/').pop() || m.id,
+              provider: 'huggingface' as const,
+              type: 'image' as const,
+              description: m.description,
+              tags: m.tags as string[] | undefined,
+              capabilities: Object.keys(caps).length > 0 ? caps : undefined,
+            };
+          })
         );
       } else {
         imageModels.push(...defaultImageModels.filter((m) => m.provider === 'huggingface'));
@@ -74,12 +100,12 @@ export function useModels() {
       const textModels: ModelOption[] = [];
       if (pollinationsTextModels.status === 'fulfilled' && pollinationsTextModels.value.length > 0) {
         textModels.push(
-          ...pollinationsTextModels.value.map((id: string) => ({
-            id,
-            name: formatModelName(id),
+          ...pollinationsTextModels.value.map((modelInfo) => ({
+            id: modelInfo.id,
+            name: modelInfo.name || formatModelName(modelInfo.id),
             provider: 'pollinations' as const,
             type: 'text' as const,
-            tags: [],
+            tags: [] as string[],
           }))
         );
       } else {
@@ -105,12 +131,12 @@ export function useModels() {
       const audioModels: ModelOption[] = [];
       if (pollinationsAudioModels.status === 'fulfilled' && pollinationsAudioModels.value.length > 0) {
         audioModels.push(
-          ...pollinationsAudioModels.value.map((id: string) => ({
-            id,
-            name: formatModelName(id),
+          ...pollinationsAudioModels.value.map((modelInfo) => ({
+            id: modelInfo.id,
+            name: modelInfo.name || formatModelName(modelInfo.id),
             provider: 'pollinations' as const,
             type: 'audio' as const,
-            tags: [],
+            tags: [] as string[],
           }))
         );
       } else {
@@ -118,21 +144,34 @@ export function useModels() {
       }
       store.setAudioModels(audioModels);
 
-      // Process video models
+      // Process video models: combine Pollinations video models + HF video models
       const videoModels: ModelOption[] = [];
+
+      // Add Pollinations video models discovered from image API
+      if (pollinationsVideoModels.length > 0) {
+        videoModels.push(...pollinationsVideoModels);
+      } else {
+        // Fall back to default Pollinations video models
+        videoModels.push(...defaultVideoModels.filter((m) => m.provider === 'pollinations'));
+      }
+
       if (hfVideoModels.status === 'fulfilled' && hfVideoModels.value.length > 0) {
         videoModels.push(
-          ...hfVideoModels.value.map((m) => ({
-            id: m.id,
-            name: m.name || m.id.split('/').pop() || m.id,
-            provider: 'huggingface' as const,
-            type: 'video' as const,
-            description: m.description,
-            tags: m.tags as string[] | undefined,
-          }))
+          ...hfVideoModels.value.map((m) => {
+            const caps = getHfCapabilities(m.id, 'text-to-video');
+            return {
+              id: m.id,
+              name: m.name || m.id.split('/').pop() || m.id,
+              provider: 'huggingface' as const,
+              type: 'video' as const,
+              description: m.description,
+              tags: m.tags as string[] | undefined,
+              capabilities: Object.keys(caps).length > 0 ? caps : undefined,
+            };
+          })
         );
       } else {
-        videoModels.push(...defaultVideoModels);
+        videoModels.push(...defaultVideoModels.filter((m) => m.provider === 'huggingface'));
       }
       store.setVideoModels(videoModels);
 

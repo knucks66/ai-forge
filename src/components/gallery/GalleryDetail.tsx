@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { GalleryItem } from '@/types/gallery';
 import { cn } from '@/lib/utils/cn';
-import { X, Heart, Trash2, Download, Copy, RefreshCw, Clock, Cpu, Palette } from 'lucide-react';
+import { X, Heart, Trash2, Download, Copy, RefreshCw, Clock, Cpu, Palette, Image as ImageIcon, Film } from 'lucide-react';
 import { formatDate, formatDuration } from '@/lib/utils/formatters';
 import { downloadBlob } from '@/lib/utils/download';
 import { useAppStore } from '@/stores/useAppStore';
 import { useImageStore } from '@/stores/useImageStore';
+import { useVideoStore } from '@/stores/useVideoStore';
 import toast from 'react-hot-toast';
 
 interface GalleryDetailProps {
@@ -21,6 +22,7 @@ export function GalleryDetail({ item, onClose, onDelete, onToggleFavorite }: Gal
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const setActiveMode = useAppStore((s) => s.setActiveMode);
   const imageStore = useImageStore();
+  const videoStore = useVideoStore();
 
   useEffect(() => {
     if (item.outputBlob) {
@@ -50,6 +52,28 @@ export function GalleryDetail({ item, onClose, onDelete, onToggleFavorite }: Gal
     }
   };
 
+  const handleUseAsInput = () => {
+    if (item.type === 'image' && item.outputBlob) {
+      const url = URL.createObjectURL(item.outputBlob);
+      imageStore.setInputImage(url, item.outputBlob);
+      imageStore.setPrompt(item.prompt);
+      setActiveMode('image');
+      onClose();
+      toast.success('Image loaded as input. Modify prompt and generate to edit.');
+    }
+  };
+
+  const handleGenerateVideo = () => {
+    if (item.type === 'image' && item.outputBlob) {
+      const url = URL.createObjectURL(item.outputBlob);
+      videoStore.setInputImage(url, item.outputBlob);
+      videoStore.setPrompt(item.prompt);
+      setActiveMode('video');
+      onClose();
+      toast.success('Image loaded for video generation.');
+    }
+  };
+
   const copyPrompt = () => {
     navigator.clipboard.writeText(item.fullPrompt || item.prompt);
     toast.success('Prompt copied');
@@ -75,6 +99,16 @@ export function GalleryDetail({ item, onClose, onDelete, onToggleFavorite }: Gal
               <button onClick={handleDownload} className="p-1.5 rounded-lg text-muted hover:text-foreground" title="Download">
                 <Download className="w-4 h-4" />
               </button>
+            )}
+            {item.type === 'image' && item.outputBlob && (
+              <>
+                <button onClick={handleUseAsInput} className="p-1.5 rounded-lg text-muted hover:text-accent" title="Use as input image">
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+                <button onClick={handleGenerateVideo} className="p-1.5 rounded-lg text-muted hover:text-accent" title="Generate video from this image">
+                  <Film className="w-4 h-4" />
+                </button>
+              </>
             )}
             {item.type === 'image' && (
               <button onClick={handleRegenerate} className="p-1.5 rounded-lg text-muted hover:text-accent" title="Re-generate">
@@ -154,6 +188,9 @@ export function GalleryDetail({ item, onClose, onDelete, onToggleFavorite }: Gal
                     {item.params.cfgScale && <p className="text-xs text-muted">CFG: {item.params.cfgScale}</p>}
                     {item.params.steps && <p className="text-xs text-muted">Steps: {item.params.steps}</p>}
                     {item.params.seed !== undefined && item.params.seed >= 0 && <p className="text-xs text-muted">Seed: {item.params.seed}</p>}
+                    {item.params.strength !== undefined && <p className="text-xs text-muted">Strength: {item.params.strength}</p>}
+                    {item.params.duration !== undefined && <p className="text-xs text-muted">Duration: {item.params.duration}s</p>}
+                    {item.params.aspectRatio && <p className="text-xs text-muted">Aspect Ratio: {item.params.aspectRatio}</p>}
                     {item.params.voice && <p className="text-xs text-muted">Voice: {item.params.voice}</p>}
                   </div>
                 </div>

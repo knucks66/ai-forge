@@ -102,6 +102,22 @@ export const handlers = [
     return binaryResponse('fake-hf-video', 'video/mp4');
   }),
 
+  http.post('/api/hf/image-to-image', async ({ request }) => {
+    const token = request.headers.get('x-hf-token');
+    if (!token) {
+      return HttpResponse.json({ error: 'HuggingFace token required' }, { status: 401 });
+    }
+    return binaryResponse('fake-hf-image-to-image', 'image/png');
+  }),
+
+  http.post('/api/hf/image-to-video', async ({ request }) => {
+    const token = request.headers.get('x-hf-token');
+    if (!token) {
+      return HttpResponse.json({ error: 'HuggingFace token required' }, { status: 401 });
+    }
+    return binaryResponse('fake-hf-image-to-video', 'video/mp4');
+  }),
+
   http.get('/api/hf/models', ({ request }) => {
     const url = new URL(request.url, 'http://localhost');
     const task = url.searchParams.get('task') || 'text-to-image';

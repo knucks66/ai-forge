@@ -50,3 +50,31 @@ describe('defaultTextModels', () => {
     expect(providers.has('huggingface')).toBe(true);
   });
 });
+
+describe('defaultVideoModels', () => {
+  it('includes both pollinations and huggingface providers', () => {
+    const providers = new Set(defaultVideoModels.map((m) => m.provider));
+    expect(providers.has('pollinations')).toBe(true);
+    expect(providers.has('huggingface')).toBe(true);
+  });
+
+  it('Pollinations video models have video capabilities', () => {
+    const pollinationsVideo = defaultVideoModels.filter((m) => m.provider === 'pollinations');
+    for (const model of pollinationsVideo) {
+      expect(model.capabilities?.supportsVideoOutput).toBe(true);
+      expect(model.capabilities?.supportsImageToVideo).toBe(true);
+      expect(model.capabilities?.supportedVideoParams).toBeDefined();
+    }
+  });
+});
+
+describe('image models with capabilities', () => {
+  it('known img2img models have supportsImageInput capability', () => {
+    const img2imgModels = defaultImageModels.filter((m) => m.capabilities?.supportsImageInput);
+    expect(img2imgModels.length).toBeGreaterThanOrEqual(1);
+    const ids = img2imgModels.map((m) => m.id);
+    expect(ids).toContain('kontext');
+    expect(ids).toContain('klein');
+    expect(ids).toContain('gptimage');
+  });
+});

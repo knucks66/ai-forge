@@ -17,13 +17,17 @@ beforeEach(() => {
     imageModels: [
       { id: 'flux', name: 'FLUX.1', provider: 'pollinations', type: 'image' },
       { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image' },
+      { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', capabilities: { supportsImageInput: true } },
       { id: 'stabilityai/sdxl', name: 'SDXL', provider: 'huggingface', type: 'image' },
     ],
     textModels: [
       { id: 'openai', name: 'GPT-4o Mini', provider: 'pollinations', type: 'text' },
     ],
     audioModels: [],
-    videoModels: [],
+    videoModels: [
+      { id: 'wan', name: 'Wan', provider: 'pollinations', type: 'video', capabilities: { supportsVideoOutput: true, supportsImageToVideo: true } },
+      { id: 'ali-vilab/t2v', name: 'T2V 1.7B', provider: 'huggingface', type: 'video', capabilities: { supportsVideoOutput: true } },
+    ],
     lastFetched: {},
     isLoading: false,
   });
@@ -84,7 +88,7 @@ describe('ModelSelector', () => {
 
   it('shows model count', () => {
     render(<ModelSelector {...defaultProps} />);
-    expect(screen.getByText(/3 models available/)).toBeInTheDocument();
+    expect(screen.getByText(/4 models available/)).toBeInTheDocument();
   });
 
   it('shows refresh button', () => {
@@ -102,5 +106,37 @@ describe('ModelSelector', () => {
       />
     );
     expect(screen.getByText(/1 models available/)).toBeInTheDocument();
+  });
+
+  describe('requiredCapability filtering', () => {
+    it('filters to only models with supportsImageInput', () => {
+      render(
+        <ModelSelector
+          {...defaultProps}
+          requiredCapability="supportsImageInput"
+        />
+      );
+      // Only 'kontext' has supportsImageInput
+      expect(screen.getByText(/1 models available/)).toBeInTheDocument();
+    });
+
+    it('filters video models by supportsImageToVideo', () => {
+      render(
+        <ModelSelector
+          type="video"
+          selectedModel="wan"
+          selectedProvider="pollinations"
+          onSelect={vi.fn()}
+          requiredCapability="supportsImageToVideo"
+        />
+      );
+      // Only 'wan' has supportsImageToVideo
+      expect(screen.getByText(/1 models available/)).toBeInTheDocument();
+    });
+
+    it('shows all models when no requiredCapability', () => {
+      render(<ModelSelector {...defaultProps} />);
+      expect(screen.getByText(/4 models available/)).toBeInTheDocument();
+    });
   });
 });

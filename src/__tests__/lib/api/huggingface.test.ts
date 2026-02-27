@@ -121,6 +121,96 @@ describe('generateHfVideo', () => {
   });
 });
 
+describe('generateHfImageToImage', () => {
+  it('sends FormData to /api/hf/image-to-image with token', async () => {
+    const { generateHfImageToImage } = await importHuggingface();
+    let capturedToken = '';
+    server.use(
+      http.post('/api/hf/image-to-image', ({ request }) => {
+        capturedToken = request.headers.get('x-hf-token') || '';
+        return new HttpResponse(new TextEncoder().encode('fake-img').buffer, {
+          headers: { 'Content-Type': 'image/png' },
+        });
+      })
+    );
+
+    const blob = new Blob(['img'], { type: 'image/png' });
+    await generateHfImageToImage('edit this', blob, 'hf_token');
+    expect(capturedToken).toBe('hf_token');
+  });
+
+  it('returns url and blob on success', async () => {
+    const { generateHfImageToImage } = await importHuggingface();
+    const blob = new Blob(['img'], { type: 'image/png' });
+    const result = await generateHfImageToImage('test', blob, 'token');
+    expect(result.url).toMatch(/^blob:/);
+    expect(result.blob).toBeDefined();
+  });
+
+  it('throws on 401', async () => {
+    const { generateHfImageToImage } = await importHuggingface();
+    server.use(
+      http.post('/api/hf/image-to-image', () => {
+        return HttpResponse.json({ error: 'HuggingFace token required' }, { status: 401 });
+      })
+    );
+
+    const blob = new Blob(['img'], { type: 'image/png' });
+    await expect(generateHfImageToImage('test', blob, '')).rejects.toThrow('HuggingFace token required');
+  });
+
+  it('throws generic error when JSON parsing fails', async () => {
+    const { generateHfImageToImage } = await importHuggingface();
+    server.use(
+      http.post('/api/hf/image-to-image', () => {
+        return new HttpResponse('not json', { status: 500 });
+      })
+    );
+
+    const blob = new Blob(['img'], { type: 'image/png' });
+    await expect(generateHfImageToImage('test', blob, 'token')).rejects.toThrow('Image-to-image generation failed');
+  });
+});
+
+describe('generateHfImageToVideo', () => {
+  it('sends FormData to /api/hf/image-to-video with token', async () => {
+    const { generateHfImageToVideo } = await importHuggingface();
+    let capturedToken = '';
+    server.use(
+      http.post('/api/hf/image-to-video', ({ request }) => {
+        capturedToken = request.headers.get('x-hf-token') || '';
+        return new HttpResponse(new TextEncoder().encode('fake-video').buffer, {
+          headers: { 'Content-Type': 'video/mp4' },
+        });
+      })
+    );
+
+    const blob = new Blob(['img'], { type: 'image/png' });
+    await generateHfImageToVideo('animate', blob, 'hf_token');
+    expect(capturedToken).toBe('hf_token');
+  });
+
+  it('returns url and blob on success', async () => {
+    const { generateHfImageToVideo } = await importHuggingface();
+    const blob = new Blob(['img'], { type: 'image/png' });
+    const result = await generateHfImageToVideo('test', blob, 'token');
+    expect(result.url).toMatch(/^blob:/);
+    expect(result.blob).toBeDefined();
+  });
+
+  it('throws on error', async () => {
+    const { generateHfImageToVideo } = await importHuggingface();
+    server.use(
+      http.post('/api/hf/image-to-video', () => {
+        return HttpResponse.json({ error: 'Image-to-video generation failed' }, { status: 500 });
+      })
+    );
+
+    const blob = new Blob(['img'], { type: 'image/png' });
+    await expect(generateHfImageToVideo('test', blob, 'token')).rejects.toThrow('Image-to-video generation failed');
+  });
+});
+
 describe('fetchHfModels', () => {
   it('returns normalized model array', async () => {
     const { fetchHfModels } = await importHuggingface();

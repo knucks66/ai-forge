@@ -9,6 +9,7 @@ export interface GalleryItem {
   outputBlob?: Blob;
   thumbnail?: Blob;
   textContent?: string;
+  inputImageBlob?: Blob;
   createdAt: number;
   durationMs: number;
   isFavorite: boolean;

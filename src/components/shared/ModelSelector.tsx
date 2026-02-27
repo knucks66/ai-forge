@@ -5,7 +5,7 @@ import { useModels } from '@/lib/hooks/useModels';
 import { cn } from '@/lib/utils/cn';
 import { ChevronDown, RefreshCw, Loader2 } from 'lucide-react';
 import { GenerationType, Provider } from '@/types/generation';
-import { ModelOption } from '@/types/models';
+import { ModelOption, ModelCapabilities } from '@/types/models';
 
 interface ModelSelectorProps {
   type: GenerationType;
@@ -13,6 +13,7 @@ interface ModelSelectorProps {
   selectedProvider: Provider;
   onSelect: (model: string, provider: Provider) => void;
   className?: string;
+  requiredCapability?: keyof ModelCapabilities;
 }
 
 export function ModelSelector({
@@ -21,15 +22,21 @@ export function ModelSelector({
   selectedProvider,
   onSelect,
   className,
+  requiredCapability,
 }: ModelSelectorProps) {
   const store = useModelsStore();
   const { refresh, isLoading } = useModels();
 
-  const models: ModelOption[] =
+  let models: ModelOption[] =
     type === 'image' ? store.imageModels :
     type === 'text' ? store.textModels :
     type === 'audio' ? store.audioModels :
     store.videoModels;
+
+  // Filter by required capability if specified
+  if (requiredCapability) {
+    models = models.filter((m) => m.capabilities?.[requiredCapability]);
+  }
 
   const pollinationsModels = models.filter((m) => m.provider === 'pollinations');
   const hfModels = models.filter((m) => m.provider === 'huggingface');
@@ -68,7 +75,7 @@ export function ModelSelector({
             <optgroup label="Pollinations (Free)">
               {pollinationsModels.map((m) => (
                 <option key={`p-${m.id}`} value={`pollinations:${m.id}`}>
-                  {m.name}
+                  {m.name}{m.capabilities?.supportsImageInput ? ' *' : ''}
                 </option>
               ))}
             </optgroup>
@@ -77,7 +84,7 @@ export function ModelSelector({
             <optgroup label="HuggingFace (Token Required)">
               {hfModels.map((m) => (
                 <option key={`hf-${m.id}`} value={`huggingface:${m.id}`}>
-                  {m.name}
+                  {m.name}{m.capabilities?.supportsImageInput ? ' *' : ''}
                 </option>
               ))}
             </optgroup>

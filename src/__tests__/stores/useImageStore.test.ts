@@ -22,6 +22,10 @@ const initialState = {
   generatedImageBlob: null,
   error: null,
   showAdvanced: false,
+  mode: 'text-to-image' as const,
+  inputImageUrl: null,
+  inputImageBlob: null,
+  strength: 0.75,
 };
 
 beforeEach(() => {
@@ -44,6 +48,10 @@ describe('useImageStore', () => {
       expect(state.isGenerating).toBe(false);
       expect(state.generatedImageUrl).toBeNull();
       expect(state.error).toBeNull();
+      expect(state.mode).toBe('text-to-image');
+      expect(state.inputImageUrl).toBeNull();
+      expect(state.inputImageBlob).toBeNull();
+      expect(state.strength).toBe(0.75);
     });
   });
 
@@ -129,16 +137,81 @@ describe('useImageStore', () => {
       getState().setShowAdvanced(true);
       expect(getState().showAdvanced).toBe(true);
     });
+
+    it('setMode', () => {
+      getState().setMode('image-to-image');
+      expect(getState().mode).toBe('image-to-image');
+    });
+
+    it('setStrength', () => {
+      getState().setStrength(0.5);
+      expect(getState().strength).toBe(0.5);
+    });
+  });
+
+  describe('setInputImage', () => {
+    it('sets inputImage and auto-switches to image-to-image mode', () => {
+      const blob = new Blob(['test'], { type: 'image/png' });
+      getState().setInputImage('blob:test-url', blob);
+      expect(getState().inputImageUrl).toBe('blob:test-url');
+      expect(getState().inputImageBlob).toBe(blob);
+      expect(getState().mode).toBe('image-to-image');
+    });
+
+    it('sets mode to text-to-image when url is null', () => {
+      getState().setMode('image-to-image');
+      getState().setInputImage(null, null);
+      expect(getState().mode).toBe('text-to-image');
+    });
+  });
+
+  describe('clearInputImage', () => {
+    it('clears input image and resets to text-to-image', () => {
+      const blob = new Blob(['test'], { type: 'image/png' });
+      getState().setInputImage('blob:url', blob);
+      expect(getState().mode).toBe('image-to-image');
+
+      getState().clearInputImage();
+      expect(getState().inputImageUrl).toBeNull();
+      expect(getState().inputImageBlob).toBeNull();
+      expect(getState().mode).toBe('text-to-image');
+    });
+  });
+
+  describe('refineCurrentImage', () => {
+    it('moves generated image to input image', () => {
+      const blob = new Blob(['generated'], { type: 'image/png' });
+      getState().setGeneratedImageUrl('blob:generated');
+      getState().setGeneratedImageBlob(blob);
+
+      getState().refineCurrentImage();
+
+      expect(getState().inputImageUrl).toBe('blob:generated');
+      expect(getState().inputImageBlob).toBe(blob);
+      expect(getState().generatedImageUrl).toBeNull();
+      expect(getState().generatedImageBlob).toBeNull();
+      expect(getState().mode).toBe('image-to-image');
+    });
+
+    it('does nothing when no generated image exists', () => {
+      getState().refineCurrentImage();
+      expect(getState().inputImageUrl).toBeNull();
+      expect(getState().inputImageBlob).toBeNull();
+      expect(getState().mode).toBe('text-to-image');
+    });
   });
 
   describe('reset', () => {
     it('restores all state to initial values', () => {
+      const blob = new Blob(['test'], { type: 'image/png' });
       getState().setPrompt('test');
       getState().setModel('turbo');
       getState().setProvider('huggingface');
       getState().setCfgScale(15);
       getState().setIsGenerating(true);
       getState().setError('error');
+      getState().setInputImage('blob:url', blob);
+      getState().setStrength(0.5);
 
       getState().reset();
 
@@ -149,22 +222,21 @@ describe('useImageStore', () => {
       expect(state.cfgScale).toBe(7);
       expect(state.isGenerating).toBe(false);
       expect(state.error).toBeNull();
+      expect(state.mode).toBe('text-to-image');
+      expect(state.inputImageUrl).toBeNull();
+      expect(state.inputImageBlob).toBeNull();
+      expect(state.strength).toBe(0.75);
     });
   });
 
   describe('partialize', () => {
     it('excludes transient fields from persistence', () => {
-      // partialize is tested by verifying what gets persisted
-      // The store config excludes: prompt, negativePrompt, seed, isGenerating,
-      // generatedImageUrl, generatedImageBlob, error
-      // and includes: model, provider, stylePreset, canvasSize, width, height,
-      // cfgScale, steps, sampler, useRandomSeed, showAdvanced
       const state = getState();
-      // These fields should exist in state (partialize doesn't remove them from state)
       expect(state).toHaveProperty('model');
       expect(state).toHaveProperty('provider');
       expect(state).toHaveProperty('isGenerating');
       expect(state).toHaveProperty('error');
+      expect(state).toHaveProperty('strength');
     });
   });
 });

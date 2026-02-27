@@ -29,9 +29,12 @@ const testServer = setupServer(
     return HttpResponse.json('response text');
   }),
 
-  // Pollinations models
+  // Pollinations models - returns array of objects
   http.get('https://image.pollinations.ai/models', () => {
-    return HttpResponse.json(['flux', 'turbo']);
+    return HttpResponse.json([
+      { id: 'flux', name: 'FLUX.1' },
+      { id: 'turbo', name: 'Turbo' },
+    ]);
   }),
   http.get('https://text.pollinations.ai/models', () => {
     return HttpResponse.json(['openai', 'mistral']);
@@ -84,6 +87,20 @@ describe('generatePollinationsImage', () => {
     expect(url.searchParams.has('seed')).toBe(false);
   });
 
+  it('includes image param when provided', async () => {
+    const { generatePollinationsImage } = await importPollinations();
+    await generatePollinationsImage('edit this', { image: 'data:image/png;base64,abc123' });
+    const url = new URL(capturedRequests[0].url);
+    expect(url.searchParams.get('image')).toBe('data:image/png;base64,abc123');
+  });
+
+  it('includes negative_prompt param when provided', async () => {
+    const { generatePollinationsImage } = await importPollinations();
+    await generatePollinationsImage('test', { negative_prompt: 'ugly, blurry' });
+    const url = new URL(capturedRequests[0].url);
+    expect(url.searchParams.get('negative_prompt')).toBe('ugly, blurry');
+  });
+
   it('includes Authorization header when pollinationsKey is set', async () => {
     useSettingsStore.setState({ pollinationsKey: 'pk_test123' });
     const { generatePollinationsImage } = await importPollinations();
@@ -108,6 +125,49 @@ describe('generatePollinationsImage', () => {
     );
 
     await expect(generatePollinationsImage('test')).rejects.toThrow('Pollinations image generation failed');
+  });
+});
+
+describe('generatePollinationsVideo', () => {
+  it('constructs correct URL with video params', async () => {
+    const { generatePollinationsVideo } = await importPollinations();
+    await generatePollinationsVideo('a sunset', {
+      model: 'wan',
+      duration: 5,
+      aspectRatio: '16:9',
+      audio: true,
+    });
+    const url = new URL(capturedRequests[0].url);
+    expect(url.searchParams.get('model')).toBe('wan');
+    expect(url.searchParams.get('duration')).toBe('5');
+    expect(url.searchParams.get('aspect_ratio')).toBe('16:9');
+    expect(url.searchParams.get('audio')).toBe('true');
+    expect(url.searchParams.get('nologo')).toBe('true');
+  });
+
+  it('includes image param for i2v', async () => {
+    const { generatePollinationsVideo } = await importPollinations();
+    await generatePollinationsVideo('animate', { model: 'wan', image: 'data:image/png;base64,abc' });
+    const url = new URL(capturedRequests[0].url);
+    expect(url.searchParams.get('image')).toBe('data:image/png;base64,abc');
+  });
+
+  it('returns url and blob on success', async () => {
+    const { generatePollinationsVideo } = await importPollinations();
+    const result = await generatePollinationsVideo('test', { model: 'wan' });
+    expect(result.url).toMatch(/^blob:/);
+    expect(result.blob).toBeDefined();
+  });
+
+  it('throws on non-ok response', async () => {
+    const { generatePollinationsVideo } = await importPollinations();
+    testServer.use(
+      http.get('https://image.pollinations.ai/prompt/:encodedPrompt', () => {
+        return new HttpResponse(null, { status: 500, statusText: 'Server Error' });
+      })
+    );
+
+    await expect(generatePollinationsVideo('test')).rejects.toThrow('Pollinations video generation failed');
   });
 });
 
@@ -167,11 +227,45 @@ describe('generatePollinationsText', () => {
 });
 
 describe('fetchPollinationsModels', () => {
-  it('returns an array of model IDs for image type', async () => {
+  it('returns an array of PollinationsModelInfo objects', async () => {
     const { fetchPollinationsModels } = await importPollinations();
     const models = await fetchPollinationsModels('image');
     expect(Array.isArray(models)).toBe(true);
     expect(models.length).toBe(2);
+    expect(models[0]).toHaveProperty('id');
+    expect(models[0]).toHaveProperty('name');
+  });
+
+  it('handles array-of-strings response', async () => {
+    testServer.use(
+      http.get('https://image.pollinations.ai/models', () => {
+        return HttpResponse.json(['flux', 'turbo']);
+      })
+    );
+
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('image');
+    expect(models).toEqual([
+      { id: 'flux', name: 'flux' },
+      { id: 'turbo', name: 'turbo' },
+    ]);
+  });
+
+  it('handles array-of-objects response', async () => {
+    testServer.use(
+      http.get('https://image.pollinations.ai/models', () => {
+        return HttpResponse.json([
+          { id: 'flux', name: 'FLUX.1', type: 'image', capabilities: ['fast'] },
+        ]);
+      })
+    );
+
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('image');
+    expect(models[0].id).toBe('flux');
+    expect(models[0].name).toBe('FLUX.1');
+    expect(models[0].type).toBe('image');
+    expect(models[0].capabilities).toEqual(['fast']);
   });
 
   it('returns empty array on failure', async () => {

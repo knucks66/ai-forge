@@ -16,7 +16,15 @@ export interface GenerationParams {
   maxTokens?: number;
   topP?: number;
   voice?: string;
+  inputImageBlob?: Blob;
+  strength?: number;
+  duration?: number;
+  aspectRatio?: '16:9' | '9:16' | '1:1';
+  audio?: boolean;
 }
+
+export type ImageGenerationMode = 'text-to-image' | 'image-to-image';
+export type VideoGenerationMode = 'text-to-video' | 'image-to-video';
 
 export interface GenerationResult {
   id: string;

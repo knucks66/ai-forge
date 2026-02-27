@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { ImageGenerationMode } from '@/types/generation';
 
 interface ImageState {
   prompt: string;
@@ -20,6 +21,10 @@ interface ImageState {
   generatedImageBlob: Blob | null;
   error: string | null;
   showAdvanced: boolean;
+  mode: ImageGenerationMode;
+  inputImageUrl: string | null;
+  inputImageBlob: Blob | null;
+  strength: number;
 
   setPrompt: (prompt: string) => void;
   setNegativePrompt: (prompt: string) => void;
@@ -39,6 +44,11 @@ interface ImageState {
   setGeneratedImageBlob: (blob: Blob | null) => void;
   setError: (error: string | null) => void;
   setShowAdvanced: (show: boolean) => void;
+  setMode: (mode: ImageGenerationMode) => void;
+  setInputImage: (url: string | null, blob: Blob | null) => void;
+  setStrength: (strength: number) => void;
+  clearInputImage: () => void;
+  refineCurrentImage: () => void;
   reset: () => void;
 }
 
@@ -61,11 +71,15 @@ const initialState = {
   generatedImageBlob: null,
   error: null,
   showAdvanced: false,
+  mode: 'text-to-image' as ImageGenerationMode,
+  inputImageUrl: null as string | null,
+  inputImageBlob: null as Blob | null,
+  strength: 0.75,
 };
 
 export const useImageStore = create<ImageState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
       setPrompt: (prompt) => set({ prompt }),
       setNegativePrompt: (prompt) => set({ negativePrompt: prompt }),
@@ -85,6 +99,30 @@ export const useImageStore = create<ImageState>()(
       setGeneratedImageBlob: (blob) => set({ generatedImageBlob: blob }),
       setError: (error) => set({ error }),
       setShowAdvanced: (show) => set({ showAdvanced: show }),
+      setMode: (mode) => set({ mode }),
+      setInputImage: (url, blob) => set({
+        inputImageUrl: url,
+        inputImageBlob: blob,
+        mode: url ? 'image-to-image' : 'text-to-image',
+      }),
+      setStrength: (strength) => set({ strength }),
+      clearInputImage: () => set({
+        inputImageUrl: null,
+        inputImageBlob: null,
+        mode: 'text-to-image',
+      }),
+      refineCurrentImage: () => {
+        const state = get();
+        if (state.generatedImageUrl && state.generatedImageBlob) {
+          set({
+            inputImageUrl: state.generatedImageUrl,
+            inputImageBlob: state.generatedImageBlob,
+            generatedImageUrl: null,
+            generatedImageBlob: null,
+            mode: 'image-to-image',
+          });
+        }
+      },
       reset: () => set({ ...initialState }),
     }),
     {
@@ -101,6 +139,7 @@ export const useImageStore = create<ImageState>()(
         sampler: state.sampler,
         useRandomSeed: state.useRandomSeed,
         showAdvanced: state.showAdvanced,
+        strength: state.strength,
       }),
     }
   )

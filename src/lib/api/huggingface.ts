@@ -94,6 +94,70 @@ export async function generateHfVideo(
   return { url, blob };
 }
 
+export async function generateHfImageToImage(
+  prompt: string,
+  imageBlob: Blob,
+  token: string,
+  options: {
+    model?: string;
+    negativePrompt?: string;
+    strength?: number;
+    guidanceScale?: number;
+    numInferenceSteps?: number;
+  } = {}
+): Promise<{ url: string; blob: Blob }> {
+  const formData = new FormData();
+  formData.append('image', imageBlob);
+  formData.append('prompt', prompt);
+  if (options.model) formData.append('model', options.model);
+  if (options.negativePrompt) formData.append('negativePrompt', options.negativePrompt);
+  if (options.strength !== undefined) formData.append('strength', options.strength.toString());
+  if (options.guidanceScale !== undefined) formData.append('guidanceScale', options.guidanceScale.toString());
+  if (options.numInferenceSteps !== undefined) formData.append('numInferenceSteps', options.numInferenceSteps.toString());
+
+  const response = await fetch('/api/hf/image-to-image', {
+    method: 'POST',
+    headers: { 'x-hf-token': token },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Image-to-image generation failed' }));
+    throw new Error(error.error || 'Image-to-image generation failed');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  return { url, blob };
+}
+
+export async function generateHfImageToVideo(
+  prompt: string,
+  imageBlob: Blob,
+  token: string,
+  model?: string
+): Promise<{ url: string; blob: Blob }> {
+  const formData = new FormData();
+  formData.append('image', imageBlob);
+  if (prompt) formData.append('prompt', prompt);
+  if (model) formData.append('model', model);
+
+  const response = await fetch('/api/hf/image-to-video', {
+    method: 'POST',
+    headers: { 'x-hf-token': token },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Image-to-video generation failed' }));
+    throw new Error(error.error || 'Image-to-video generation failed');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  return { url, blob };
+}
+
 export async function fetchHfModels(
   task: string,
   token?: string

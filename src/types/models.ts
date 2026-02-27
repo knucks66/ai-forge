@@ -1,3 +1,10 @@
+export interface ModelCapabilities {
+  supportsImageInput?: boolean;
+  supportsVideoOutput?: boolean;
+  supportsImageToVideo?: boolean;
+  supportedVideoParams?: { duration?: boolean; aspectRatio?: boolean; audio?: boolean };
+}
+
 export interface ModelOption {
   id: string;
   name: string;
@@ -5,6 +12,7 @@ export interface ModelOption {
   type: import('./generation').GenerationType;
   description?: string;
   tags?: string[];
+  capabilities?: ModelCapabilities;
 }
 
 export interface ModelsState {
