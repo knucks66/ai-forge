@@ -1,3 +1,12 @@
+import { useSettingsStore } from '@/stores/useSettingsStore';
+
+function getAuthHeaders(): Record<string, string> {
+  const key = useSettingsStore.getState().pollinationsKey;
+  const headers: Record<string, string> = {};
+  if (key) headers['Authorization'] = `Bearer ${key}`;
+  return headers;
+}
+
 export async function generatePollinationsImage(
   prompt: string,
   options: {
@@ -20,7 +29,7 @@ export async function generatePollinationsImage(
   const encodedPrompt = encodeURIComponent(prompt);
   const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?${params.toString()}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error(`Pollinations image generation failed: ${response.statusText}`);
 
   const blob = await response.blob();
@@ -40,7 +49,10 @@ export async function generatePollinationsText(
 ): Promise<Response> {
   const response = await fetch('https://text.pollinations.ai/', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+    },
     body: JSON.stringify({
       messages,
       model: options.model || 'openai',
@@ -62,7 +74,7 @@ export async function generatePollinationsAudio(
   const encodedText = encodeURIComponent(text);
   const url = `https://text.pollinations.ai/${encodedText}?model=openai-audio&voice=${voice}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error(`Pollinations audio generation failed: ${response.statusText}`);
 
   const blob = await response.blob();
@@ -77,7 +89,7 @@ export async function fetchPollinationsModels(type: 'image' | 'text' | 'audio'):
     else if (type === 'text') url = 'https://text.pollinations.ai/models';
     else url = 'https://text.pollinations.ai/models';
 
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: getAuthHeaders() });
     if (!response.ok) return [];
     return await response.json();
   } catch {

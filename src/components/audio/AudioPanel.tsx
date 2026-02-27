@@ -1,6 +1,7 @@
 'use client';
 
 import { useAudioStore } from '@/stores/useAudioStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { VoiceSelector } from './VoiceSelector';
 import { AudioPlayer } from './AudioPlayer';
 import { GenerateButton } from '@/components/shared/GenerateButton';
@@ -14,10 +15,16 @@ import toast from 'react-hot-toast';
 
 export function AudioPanel() {
   const store = useAudioStore();
+  const { pollinationsKey } = useSettingsStore();
 
   const handleGenerate = async () => {
     if (!store.text.trim()) {
       toast.error('Please enter text to convert to speech');
+      return;
+    }
+
+    if (!pollinationsKey) {
+      toast.error('Pollinations API key required. Add it in Settings.');
       return;
     }
 

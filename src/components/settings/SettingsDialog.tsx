@@ -15,8 +15,11 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
   const { hfToken, pollinationsKey, setHfToken, setPollinationsKey } = useSettingsStore();
   const { theme, setTheme } = useAppStore();
   const [showHfToken, setShowHfToken] = useState(false);
+  const [showPollKey, setShowPollKey] = useState(false);
   const [testingHf, setTestingHf] = useState(false);
+  const [testingPoll, setTestingPoll] = useState(false);
   const [hfStatus, setHfStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [pollStatus, setPollStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const testHfConnection = async () => {
     if (!hfToken) {
@@ -107,18 +110,65 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
               </p>
             </div>
 
-            {/* Pollinations Key (optional) */}
+            {/* Pollinations Key */}
             <div className="space-y-2">
-              <label className="text-sm text-muted">Pollinations Key (Optional)</label>
-              <input
-                type="text"
-                value={pollinationsKey}
-                onChange={(e) => setPollinationsKey(e.target.value)}
-                placeholder="Optional - Pollinations works without a key"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
-              />
+              <label className="text-sm text-muted">Pollinations API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showPollKey ? 'text' : 'password'}
+                    value={pollinationsKey}
+                    onChange={(e) => { setPollinationsKey(e.target.value); setPollStatus('idle'); }}
+                    placeholder="pk_... or sk_..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-accent pr-10"
+                  />
+                  <button
+                    onClick={() => setShowPollKey(!showPollKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                  >
+                    {showPollKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!pollinationsKey) { toast.error('Please enter a Pollinations key first'); return; }
+                    setTestingPoll(true);
+                    setPollStatus('idle');
+                    try {
+                      const res = await fetch('https://text.pollinations.ai/models', {
+                        headers: { Authorization: `Bearer ${pollinationsKey}` },
+                      });
+                      if (res.ok) {
+                        setPollStatus('success');
+                        toast.success('Pollinations connection successful!');
+                      } else {
+                        setPollStatus('error');
+                        toast.error('Invalid Pollinations key');
+                      }
+                    } catch {
+                      setPollStatus('error');
+                      toast.error('Connection test failed');
+                    } finally {
+                      setTestingPoll(false);
+                    }
+                  }}
+                  disabled={testingPoll || !pollinationsKey}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                    'bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50'
+                  )}
+                >
+                  {testingPoll ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    pollStatus === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                    pollStatus === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> : null}
+                  Test
+                </button>
+              </div>
               <p className="text-xs text-muted">
-                Pollinations.ai is free and works without authentication.
+                Required for Pollinations models. Get yours at{' '}
+                <a href="https://auth.pollinations.ai/" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  auth.pollinations.ai
+                </a>
               </p>
             </div>
           </section>

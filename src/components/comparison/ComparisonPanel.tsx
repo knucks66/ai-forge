@@ -37,7 +37,7 @@ const defaultSlot = (model: string = 'flux', provider: Provider = 'pollinations'
 });
 
 export function ComparisonPanel() {
-  const { hfToken } = useSettingsStore();
+  const { hfToken, pollinationsKey } = useSettingsStore();
   const [mode, setMode] = useState<CompareMode>('image');
   const [prompt, setPrompt] = useState('');
   const [slotA, setSlotA] = useState<SlotState>(defaultSlot('flux', 'pollinations'));
@@ -59,6 +59,7 @@ export function ComparisonPanel() {
       try {
         if (mode === 'image') {
           if (slot.provider === 'pollinations') {
+            if (!pollinationsKey) throw new Error('Pollinations API key required');
             const result = await generatePollinationsImage(prompt, { model: slot.model });
             setSlot((s) => ({ ...s, result: result.url, resultBlob: result.blob, isGenerating: false }));
           } else {
@@ -70,6 +71,7 @@ export function ComparisonPanel() {
           const messages = [{ role: 'user', content: prompt }];
           let response: Response;
           if (slot.provider === 'pollinations') {
+            if (!pollinationsKey) throw new Error('Pollinations API key required');
             response = await generatePollinationsText(messages, { model: slot.model, stream: false });
           } else {
             if (!hfToken) throw new Error('HuggingFace token required');

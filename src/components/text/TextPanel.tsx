@@ -17,11 +17,16 @@ import { useState } from 'react';
 
 export function TextPanel() {
   const store = useTextStore();
-  const { hfToken } = useSettingsStore();
+  const { hfToken, pollinationsKey } = useSettingsStore();
   const [showControls, setShowControls] = useState(false);
 
   const handleSend = async (content: string) => {
     if (!content.trim() || store.isGenerating) return;
+
+    if (store.provider === 'pollinations' && !pollinationsKey) {
+      toast.error('Pollinations API key required. Add it in Settings.');
+      return;
+    }
 
     if (store.provider === 'huggingface' && !hfToken) {
       toast.error('HuggingFace token required. Add it in Settings.');

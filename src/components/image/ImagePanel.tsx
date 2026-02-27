@@ -23,12 +23,17 @@ import { useState } from 'react';
 
 export function ImagePanel() {
   const store = useImageStore();
-  const { hfToken } = useSettingsStore();
+  const { hfToken, pollinationsKey } = useSettingsStore();
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleGenerate = async () => {
     if (!store.prompt.trim()) {
       toast.error('Please enter a prompt');
+      return;
+    }
+
+    if (store.provider === 'pollinations' && !pollinationsKey) {
+      toast.error('Pollinations API key required. Add it in Settings.');
       return;
     }
 
