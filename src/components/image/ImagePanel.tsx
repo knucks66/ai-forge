@@ -23,7 +23,7 @@ import { useState } from 'react';
 
 export function ImagePanel() {
   const store = useImageStore();
-  const { hfToken, pollinationsKey } = useSettingsStore();
+  const { hfToken, pollinationsKey, nsfwEnabled } = useSettingsStore();
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleGenerate = async () => {
@@ -54,6 +54,12 @@ export function ImagePanel() {
       .filter(Boolean)
       .join(', ');
 
+    const safetyNegative = 'nsfw, nude, explicit, adult, sexual';
+    const baseNegative = store.negativePrompt || preset?.negativePrompt || '';
+    const effectiveNegative = nsfwEnabled
+      ? baseNegative
+      : [baseNegative, safetyNegative].filter(Boolean).join(', ');
+
     try {
       let result: { url: string; blob: Blob };
 
@@ -67,7 +73,7 @@ export function ImagePanel() {
       } else {
         result = await generateHfImage(fullPrompt, hfToken, {
           model: store.model,
-          negativePrompt: store.negativePrompt || preset?.negativePrompt,
+          negativePrompt: effectiveNegative,
           width: store.width,
           height: store.height,
           guidanceScale: store.cfgScale,
@@ -150,7 +156,14 @@ export function ImagePanel() {
         {/* Style Presets */}
         <StylePresetPicker
           selected={store.stylePreset}
-          onSelect={store.setStylePreset}
+          onSelect={(presetId: string) => {
+            store.setStylePreset(presetId);
+            const preset = stylePresets.find((p) => p.id === presetId);
+            if (preset?.suggestedCfg !== undefined) {
+              store.setCfgScale(preset.suggestedCfg);
+              toast(`CFG scale set to ${preset.suggestedCfg} for ${preset.name}`, { icon: '🎨', duration: 2000 });
+            }
+          }}
         />
 
         {/* Canvas Size */}

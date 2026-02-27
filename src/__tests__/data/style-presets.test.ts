@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { stylePresets, styleCategories, StyleCategory } from '@/data/style-presets';
 
 describe('stylePresets', () => {
-  it('has at least 60 presets', () => {
-    expect(stylePresets.length).toBeGreaterThanOrEqual(60);
+  it('has at least 180 presets', () => {
+    expect(stylePresets.length).toBeGreaterThanOrEqual(180);
   });
 
   it('every preset has required fields', () => {
@@ -52,15 +52,50 @@ describe('stylePresets', () => {
       expect(preset.suggestedCfg).toBeGreaterThan(0);
     }
   });
+
+  it('includes 7 new categories', () => {
+    const categoryIds = styleCategories.map((c) => c.id);
+    const newCategories = ['illustration', 'cultural', 'craft-paper', 'street-urban', 'game-art', 'architecture', 'nsfw'];
+    for (const cat of newCategories) {
+      expect(categoryIds).toContain(cat);
+    }
+  });
+
+  it('each non-none category has at least 6 presets', () => {
+    for (const cat of styleCategories) {
+      if (cat.id === 'none') continue;
+      const count = stylePresets.filter((p) => p.category === cat.id).length;
+      expect(count).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('all NSFW category presets have nsfw: true', () => {
+    const nsfwPresets = stylePresets.filter((p) => p.category === 'nsfw');
+    expect(nsfwPresets.length).toBeGreaterThanOrEqual(10);
+    for (const preset of nsfwPresets) {
+      expect(preset.nsfw).toBe(true);
+    }
+  });
+
+  it('non-nsfw-category presets do not have nsfw: true by default', () => {
+    const nonNsfwCategory = stylePresets.filter((p) => p.category !== 'nsfw');
+    for (const preset of nonNsfwCategory) {
+      expect(preset.nsfw).toBeFalsy();
+    }
+  });
 });
 
 describe('styleCategories', () => {
-  it('has 10 categories', () => {
-    expect(styleCategories).toHaveLength(10);
+  it('has 17 categories', () => {
+    expect(styleCategories).toHaveLength(17);
   });
 
   it('starts with "none"', () => {
     expect(styleCategories[0].id).toBe('none');
+  });
+
+  it('ends with "nsfw"', () => {
+    expect(styleCategories[styleCategories.length - 1].id).toBe('nsfw');
   });
 
   it('every category has id and name', () => {

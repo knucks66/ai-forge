@@ -1,14 +1,61 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useImageStore } from '@/stores/useImageStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { SliderControl } from '@/components/shared/SliderControl';
 import { samplers } from '@/data/samplers';
 import { cn } from '@/lib/utils/cn';
 import { ChevronDown, Shuffle } from 'lucide-react';
 import { randomSeed } from '@/lib/utils/seed';
 
+const negativeSnippets = [
+  { label: 'blurry', value: 'blurry' },
+  { label: 'watermark', value: 'watermark, text, signature' },
+  { label: 'low quality', value: 'low quality, jpeg artifacts, pixelated' },
+  { label: 'bad hands', value: 'deformed hands, extra fingers, mutated hands, bad anatomy' },
+  { label: 'bad face', value: 'deformed face, ugly, disfigured' },
+  { label: 'duplicate', value: 'duplicate, clone, copy' },
+  { label: 'cropped', value: 'cropped, out of frame, cut off' },
+  { label: 'nsfw', value: 'nsfw, nude, explicit' },
+];
+
 export function AdvancedImageControls() {
   const store = useImageStore();
+  const nsfwEnabled = useSettingsStore((s) => s.nsfwEnabled);
+
+  const activeSnippets = useMemo(() => {
+    const current = store.negativePrompt.toLowerCase();
+    return negativeSnippets.map((s) => ({
+      ...s,
+      active: s.value.split(', ').some((term) => current.includes(term.toLowerCase())),
+    }));
+  }, [store.negativePrompt]);
+
+  const toggleSnippet = (snippet: (typeof negativeSnippets)[number]) => {
+    const current = store.negativePrompt;
+    const terms = snippet.value.split(', ');
+    const isActive = terms.some((term) => current.toLowerCase().includes(term.toLowerCase()));
+
+    if (isActive) {
+      // Remove snippet terms from negative prompt
+      let updated = current;
+      for (const term of terms) {
+        const regex = new RegExp(`(,\\s*)?${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s*,)?`, 'gi');
+        updated = updated.replace(regex, (match, before, after) => {
+          if (before && after) return ', ';
+          return '';
+        });
+      }
+      store.setNegativePrompt(updated.replace(/^,\s*|,\s*$/g, '').trim());
+    } else {
+      // Append snippet terms
+      const newValue = current ? `${current}, ${snippet.value}` : snippet.value;
+      store.setNegativePrompt(newValue);
+    }
+  };
+
+  const isNsfwSnippetLocked = !nsfwEnabled;
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
@@ -32,6 +79,33 @@ export function AdvancedImageControls() {
               rows={2}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-xs resize-none focus:outline-none focus:border-accent"
             />
+            {/* Negative prompt snippets */}
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {activeSnippets.map((snippet) => {
+                const locked = snippet.label === 'nsfw' && isNsfwSnippetLocked;
+                return (
+                  <button
+                    key={snippet.label}
+                    onClick={() => {
+                      if (locked) return;
+                      toggleSnippet(snippet);
+                    }}
+                    disabled={locked}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md text-[10px] font-medium border transition-colors',
+                      snippet.active || locked
+                        ? 'border-accent/50 bg-accent/10 text-accent'
+                        : 'border-border text-muted hover:border-accent/30 hover:text-foreground',
+                      locked && 'opacity-70 cursor-not-allowed'
+                    )}
+                    title={locked ? 'Auto-active in PG-13 mode' : snippet.value}
+                  >
+                    {snippet.active || locked ? '−' : '+'} {snippet.label}
+                    {locked && ' 🔒'}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* CFG Scale */}

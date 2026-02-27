@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 const { getState, setState } = useSettingsStore;
 
 beforeEach(() => {
-  setState({ hfToken: '', pollinationsKey: '' });
+  setState({ hfToken: '', pollinationsKey: '', nsfwEnabled: false });
 });
 
 describe('useSettingsStore', () => {
@@ -12,6 +12,10 @@ describe('useSettingsStore', () => {
     it('starts with empty tokens', () => {
       expect(getState().hfToken).toBe('');
       expect(getState().pollinationsKey).toBe('');
+    });
+
+    it('nsfwEnabled defaults to false', () => {
+      expect(getState().nsfwEnabled).toBe(false);
     });
   });
 
@@ -38,6 +42,19 @@ describe('useSettingsStore', () => {
       getState().setPollinationsKey('pk_xyz789');
       getState().setPollinationsKey('');
       expect(getState().pollinationsKey).toBe('');
+    });
+  });
+
+  describe('setNsfwEnabled', () => {
+    it('enables NSFW mode', () => {
+      getState().setNsfwEnabled(true);
+      expect(getState().nsfwEnabled).toBe(true);
+    });
+
+    it('disables NSFW mode', () => {
+      getState().setNsfwEnabled(true);
+      getState().setNsfwEnabled(false);
+      expect(getState().nsfwEnabled).toBe(false);
     });
   });
 });
