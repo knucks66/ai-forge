@@ -21,6 +21,7 @@ export interface PollinationsModelInfo {
   input_modalities?: string[];
   output_modalities?: string[];
   paid_only?: boolean;
+  costsCredits?: boolean;
 }
 
 export async function generatePollinationsImage(
@@ -181,12 +182,17 @@ export async function fetchPollinationsModels(
         if (typeof item === 'string') {
           return { id: item, name: item };
         }
+        const pricing = item.pricing as Record<string, unknown> | undefined;
+        const costsCredits = pricing
+          ? Object.entries(pricing).some(([k, v]) => k !== 'currency' && typeof v === 'number' && v > 0)
+          : false;
         return {
           id: (item.name as string) || '',
           name: (item.description as string) || (item.name as string) || '',
           input_modalities: item.input_modalities as string[] | undefined,
           output_modalities: item.output_modalities as string[] | undefined,
           paid_only: item.paid_only as boolean | undefined,
+          costsCredits,
         };
       });
     }

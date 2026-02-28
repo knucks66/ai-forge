@@ -63,6 +63,7 @@ export function useModels() {
               tags: [],
               capabilities: caps,
               paidOnly: modelInfo.paid_only,
+              costsCredits: modelInfo.costsCredits,
             });
           } else {
             imageModels.push({
@@ -73,6 +74,7 @@ export function useModels() {
               tags: [],
               capabilities: Object.keys(caps).length > 0 ? caps : undefined,
               paidOnly: modelInfo.paid_only,
+              costsCredits: modelInfo.costsCredits,
             });
           }
         }
@@ -111,6 +113,7 @@ export function useModels() {
             type: 'text' as const,
             tags: [] as string[],
             paidOnly: modelInfo.paid_only,
+            costsCredits: modelInfo.costsCredits,
           }))
         );
       } else {
@@ -143,6 +146,7 @@ export function useModels() {
             type: 'audio' as const,
             tags: [] as string[],
             paidOnly: modelInfo.paid_only,
+            costsCredits: modelInfo.costsCredits,
           }))
         );
       } else {

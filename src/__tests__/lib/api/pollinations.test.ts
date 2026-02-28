@@ -24,8 +24,8 @@ const testServer = setupServer(
   // Models endpoints MUST come before the parameterized /image/:prompt route
   http.get(`${BASE}/image/models`, () => {
     return HttpResponse.json([
-      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'] },
-      { name: 'kontext', description: 'FLUX.1 Kontext', input_modalities: ['text', 'image'], output_modalities: ['image'] },
+      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'], pricing: { currency: 'pollen', completionImageTokens: 0.001 } },
+      { name: 'kontext', description: 'FLUX.1 Kontext', input_modalities: ['text', 'image'], output_modalities: ['image'], paid_only: true, pricing: { currency: 'pollen', completionImageTokens: 0.04 } },
     ]);
   }),
   http.get(`${BASE}/models`, () => {
@@ -274,6 +274,30 @@ describe('fetchPollinationsModels', () => {
     expect(models[0].output_modalities).toEqual(['image']);
     expect(models[1].id).toBe('kontext');
     expect(models[1].input_modalities).toEqual(['text', 'image']);
+  });
+
+  it('parses costsCredits from pricing data', async () => {
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('image');
+    // flux has pricing → costsCredits=true
+    expect(models[0].costsCredits).toBe(true);
+    // kontext has pricing + paid_only
+    expect(models[1].costsCredits).toBe(true);
+    expect(models[1].paid_only).toBe(true);
+  });
+
+  it('sets costsCredits to false when no pricing', async () => {
+    testServer.use(
+      http.get(`${BASE}/image/models`, () => {
+        return HttpResponse.json([
+          { name: 'free-model', description: 'Free Model', input_modalities: ['text'], output_modalities: ['image'] },
+        ]);
+      })
+    );
+
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('image');
+    expect(models[0].costsCredits).toBe(false);
   });
 
   it('handles array-of-strings response', async () => {

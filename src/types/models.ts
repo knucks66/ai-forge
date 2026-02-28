@@ -14,6 +14,7 @@ export interface ModelOption {
   tags?: string[];
   capabilities?: ModelCapabilities;
   paidOnly?: boolean;
+  costsCredits?: boolean;
 }
 
 export interface ModelsState {

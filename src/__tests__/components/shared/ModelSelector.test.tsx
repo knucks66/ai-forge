@@ -21,10 +21,11 @@ vi.mock('react-hot-toast', () => ({
 beforeEach(() => {
   useModelsStore.setState({
     imageModels: [
-      { id: 'flux', name: 'FLUX.1', provider: 'pollinations', type: 'image' },
-      { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image' },
-      { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', capabilities: { supportsImageInput: true } },
-      { id: 'premium-model', name: 'Premium', provider: 'pollinations', type: 'image', paidOnly: true },
+      { id: 'flux', name: 'FLUX.1', provider: 'pollinations', type: 'image', costsCredits: true },
+      { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image', costsCredits: true },
+      { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', capabilities: { supportsImageInput: true }, costsCredits: true },
+      { id: 'premium-model', name: 'Premium', provider: 'pollinations', type: 'image', paidOnly: true, costsCredits: true },
+      { id: 'free-model', name: 'Freebie', provider: 'pollinations', type: 'image' },
       { id: 'stabilityai/sdxl', name: 'SDXL', provider: 'huggingface', type: 'image' },
     ],
     textModels: [
@@ -92,15 +93,17 @@ describe('ModelSelector', () => {
     expect(screen.getByText('HuggingFace')).toBeInTheDocument();
   });
 
-  it('shows FREE and PAID badges', async () => {
+  it('shows FREE, CREDITS, and PAID badges', async () => {
     const user = userEvent.setup();
     render(<ModelSelector {...defaultProps} />);
 
     await user.click(screen.getByText('FLUX.1'));
 
     const freeBadges = screen.getAllByText('FREE');
+    const creditsBadges = screen.getAllByText('CREDITS');
     const paidBadges = screen.getAllByText('PAID');
     expect(freeBadges.length).toBeGreaterThan(0);
+    expect(creditsBadges.length).toBeGreaterThan(0);
     expect(paidBadges.length).toBeGreaterThan(0);
   });
 
@@ -140,7 +143,7 @@ describe('ModelSelector', () => {
 
   it('shows model count', () => {
     render(<ModelSelector {...defaultProps} />);
-    expect(screen.getByText(/5 models available/)).toBeInTheDocument();
+    expect(screen.getByText(/6 models available/)).toBeInTheDocument();
   });
 
   it('shows refresh button', () => {
@@ -214,27 +217,35 @@ describe('ModelSelector', () => {
 
     it('shows all models when no requiredCapability', () => {
       render(<ModelSelector {...defaultProps} />);
-      expect(screen.getByText(/5 models available/)).toBeInTheDocument();
+      expect(screen.getByText(/6 models available/)).toBeInTheDocument();
     });
   });
 
-  describe('paid model affordability', () => {
-    it('dims paid models when balance is 0', async () => {
+  describe('model affordability', () => {
+    it('dims paid and credits models when balance is 0', async () => {
       useBalanceStore.setState({
         pollinations: { balance: 0, tier: 'seed' },
       });
 
       const user = userEvent.setup();
-      const { container } = render(<ModelSelector {...defaultProps} />);
+      render(<ModelSelector {...defaultProps} />);
 
       await user.click(screen.getByText('FLUX.1'));
 
-      // The Premium model button should have opacity-50
+      // Premium (paidOnly) should be dimmed
       const premiumButton = screen.getByText('Premium').closest('button');
       expect(premiumButton?.className).toContain('opacity-50');
+
+      // Turbo (costsCredits) should also be dimmed
+      const turboButton = screen.getByText('Turbo').closest('button');
+      expect(turboButton?.className).toContain('opacity-50');
+
+      // Freebie (no cost) should NOT be dimmed
+      const freeButton = screen.getByText('Freebie').closest('button');
+      expect(freeButton?.className).not.toContain('opacity-50');
     });
 
-    it('does not dim paid models when balance is positive', async () => {
+    it('does not dim models when balance is positive', async () => {
       useBalanceStore.setState({
         pollinations: { balance: 5.42, tier: 'seed' },
       });

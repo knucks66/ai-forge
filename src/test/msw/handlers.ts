@@ -14,9 +14,9 @@ export const handlers = [
   // Pollinations image/models MUST come before /image/:prompt to avoid being caught
   http.get(`${POLL_BASE}/image/models`, () => {
     return HttpResponse.json([
-      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'] },
-      { name: 'turbo', description: 'Turbo', input_modalities: ['text'], output_modalities: ['image'] },
-      { name: 'flux-realism', description: 'Flux Realism', input_modalities: ['text'], output_modalities: ['image'] },
+      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'], pricing: { currency: 'pollen', completionImageTokens: 0.001 } },
+      { name: 'turbo', description: 'Turbo', input_modalities: ['text'], output_modalities: ['image'], pricing: { currency: 'pollen', completionImageTokens: 0.002 } },
+      { name: 'flux-realism', description: 'Flux Realism', input_modalities: ['text'], output_modalities: ['image'], paid_only: true, pricing: { currency: 'pollen', completionImageTokens: 0.04 } },
     ]);
   }),
 
@@ -56,9 +56,9 @@ export const handlers = [
   // Pollinations text/general models
   http.get(`${POLL_BASE}/models`, () => {
     return HttpResponse.json([
-      { name: 'openai', description: 'GPT-5 Mini', input_modalities: ['text'], output_modalities: ['text'] },
-      { name: 'mistral', description: 'Mistral', input_modalities: ['text'], output_modalities: ['text'] },
-      { name: 'llama', description: 'Llama', input_modalities: ['text'], output_modalities: ['text'] },
+      { name: 'openai', description: 'GPT-5 Mini', input_modalities: ['text'], output_modalities: ['text'], pricing: { currency: 'pollen', promptTextTokens: 0.000002 } },
+      { name: 'mistral', description: 'Mistral', input_modalities: ['text'], output_modalities: ['text'], pricing: { currency: 'pollen', promptTextTokens: 0.000001 } },
+      { name: 'polly', description: 'Polly', input_modalities: ['text'], output_modalities: ['text'] },
     ]);
   }),
 

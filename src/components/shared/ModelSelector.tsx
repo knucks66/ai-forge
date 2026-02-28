@@ -76,9 +76,24 @@ export function ModelSelector({
     };
   }, [isOpen]);
 
+  function getCostTier(m: ModelOption): 'free' | 'credits' | 'paid' {
+    if (m.paidOnly) return 'paid';
+    if (m.costsCredits) return 'credits';
+    return 'free';
+  }
+
+  function getBadge(tier: 'free' | 'credits' | 'paid') {
+    switch (tier) {
+      case 'paid': return { label: 'PAID', className: 'bg-red-500/15 text-red-400' };
+      case 'credits': return { label: 'CREDITS', className: 'bg-amber-500/15 text-amber-400' };
+      default: return { label: 'FREE', className: 'bg-emerald-500/15 text-emerald-400' };
+    }
+  }
+
   function handleSelect(model: ModelOption) {
-    if (model.paidOnly && pollinationsBalance !== null && pollinationsBalance <= 0) {
-      toast('This model requires paid credits. Your balance is 0.', { icon: '⚠️', duration: 3000 });
+    const tier = getCostTier(model);
+    if (tier !== 'free' && pollinationsBalance !== null && pollinationsBalance <= 0) {
+      toast('This model costs credits and your balance is 0.', { icon: '⚠️', duration: 3000 });
     }
     onSelect(model.id, model.provider);
     setIsOpen(false);
@@ -145,7 +160,9 @@ export function ModelSelector({
               </div>
               {pollinationsModels.map((m) => {
                 const isSelected = m.id === selectedModel && m.provider === selectedProvider;
-                const isUnaffordable = m.paidOnly && pollinationsBalance !== null && pollinationsBalance <= 0;
+                const tier = getCostTier(m);
+                const badge = getBadge(tier);
+                const isUnaffordable = tier !== 'free' && pollinationsBalance !== null && pollinationsBalance <= 0;
                 return (
                   <button
                     key={`p-${m.id}`}
@@ -164,11 +181,9 @@ export function ModelSelector({
                     </span>
                     <span className={cn(
                       'text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0',
-                      m.paidOnly
-                        ? 'bg-amber-500/15 text-amber-400'
-                        : 'bg-emerald-500/15 text-emerald-400'
+                      badge.className
                     )}>
-                      {m.paidOnly ? 'PAID' : 'FREE'}
+                      {badge.label}
                     </span>
                   </button>
                 );
@@ -204,8 +219,8 @@ export function ModelSelector({
                       {m.name}
                       {m.capabilities?.supportsImageInput ? ' *' : ''}
                     </span>
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-emerald-500/15 text-emerald-400">
-                      FREE
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-amber-500/15 text-amber-400">
+                      CREDITS
                     </span>
                   </button>
                 );
