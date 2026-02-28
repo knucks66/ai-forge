@@ -204,6 +204,8 @@ export function ModelSelector({
               </div>
               {hfModels.map((m) => {
                 const isSelected = m.id === selectedModel && m.provider === selectedProvider;
+                const tier = getCostTier(m);
+                const badge = getBadge(tier);
                 return (
                   <button
                     key={`hf-${m.id}`}
@@ -219,8 +221,11 @@ export function ModelSelector({
                       {m.name}
                       {m.capabilities?.supportsImageInput ? ' *' : ''}
                     </span>
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-amber-500/15 text-amber-400">
-                      CREDITS
+                    <span className={cn(
+                      'text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0',
+                      badge.className
+                    )}>
+                      {badge.label}
                     </span>
                   </button>
                 );
