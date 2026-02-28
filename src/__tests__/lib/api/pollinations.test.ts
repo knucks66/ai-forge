@@ -6,9 +6,25 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 // Create a dedicated server for this test file with a handler that captures requests
 let capturedRequests: { url: string; headers: Record<string, string> }[] = [];
 
+const BASE = 'https://gen.pollinations.ai';
+
 const testServer = setupServer(
-  // Catch ALL requests to image.pollinations.ai
-  http.get('https://image.pollinations.ai/prompt/:encodedPrompt', ({ request }) => {
+  // Models endpoints MUST come before the parameterized /image/:prompt route
+  http.get(`${BASE}/image/models`, () => {
+    return HttpResponse.json([
+      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'] },
+      { name: 'kontext', description: 'FLUX.1 Kontext', input_modalities: ['text', 'image'], output_modalities: ['image'] },
+    ]);
+  }),
+  http.get(`${BASE}/models`, () => {
+    return HttpResponse.json([
+      { name: 'openai', description: 'GPT-5 Mini', input_modalities: ['text'], output_modalities: ['text'] },
+      { name: 'mistral', description: 'Mistral', input_modalities: ['text'], output_modalities: ['text'] },
+    ]);
+  }),
+
+  // Image generation (catches /image/{prompt})
+  http.get(`${BASE}/image/:encodedPrompt`, ({ request }) => {
     capturedRequests.push({
       url: request.url,
       headers: Object.fromEntries(request.headers.entries()),
@@ -19,25 +35,14 @@ const testServer = setupServer(
     });
   }),
 
-  // Pollinations text
-  http.post('https://text.pollinations.ai/', async ({ request }) => {
+  // Text generation (OpenAI-compatible endpoint)
+  http.post(`${BASE}/v1/chat/completions`, async ({ request }) => {
     const body = await request.json();
     capturedRequests.push({
       url: request.url,
       headers: Object.fromEntries(request.headers.entries()),
     });
-    return HttpResponse.json('response text');
-  }),
-
-  // Pollinations models - returns array of objects
-  http.get('https://image.pollinations.ai/models', () => {
-    return HttpResponse.json([
-      { id: 'flux', name: 'FLUX.1' },
-      { id: 'turbo', name: 'Turbo' },
-    ]);
-  }),
-  http.get('https://text.pollinations.ai/models', () => {
-    return HttpResponse.json(['openai', 'mistral']);
+    return HttpResponse.json({ choices: [{ message: { content: 'response text' } }] });
   }),
 );
 
@@ -61,7 +66,13 @@ describe('generatePollinationsImage', () => {
   it('constructs correct URL with encoded prompt', async () => {
     const { generatePollinationsImage } = await importPollinations();
     await generatePollinationsImage('a cute cat');
-    expect(capturedRequests[0].url).toContain('/prompt/a%20cute%20cat');
+    expect(capturedRequests[0].url).toContain('/image/a%20cute%20cat');
+  });
+
+  it('uses gen.pollinations.ai base URL', async () => {
+    const { generatePollinationsImage } = await importPollinations();
+    await generatePollinationsImage('test');
+    expect(capturedRequests[0].url).toContain('gen.pollinations.ai');
   });
 
   it('includes model and dimensions in query params', async () => {
@@ -108,6 +119,13 @@ describe('generatePollinationsImage', () => {
     expect(capturedRequests[0].headers['authorization']).toBe('Bearer pk_test123');
   });
 
+  it('does not include Authorization header when pollinationsKey is empty', async () => {
+    useSettingsStore.setState({ pollinationsKey: '' });
+    const { generatePollinationsImage } = await importPollinations();
+    await generatePollinationsImage('test');
+    expect(capturedRequests[0].headers['authorization']).toBeUndefined();
+  });
+
   it('returns url and blob on success', async () => {
     const { generatePollinationsImage } = await importPollinations();
     const result = await generatePollinationsImage('test');
@@ -119,7 +137,7 @@ describe('generatePollinationsImage', () => {
   it('throws on non-ok response', async () => {
     const { generatePollinationsImage } = await importPollinations();
     testServer.use(
-      http.get('https://image.pollinations.ai/prompt/:encodedPrompt', () => {
+      http.get(`${BASE}/image/:encodedPrompt`, () => {
         return new HttpResponse(null, { status: 500, statusText: 'Internal Server Error' });
       })
     );
@@ -162,7 +180,7 @@ describe('generatePollinationsVideo', () => {
   it('throws on non-ok response', async () => {
     const { generatePollinationsVideo } = await importPollinations();
     testServer.use(
-      http.get('https://image.pollinations.ai/prompt/:encodedPrompt', () => {
+      http.get(`${BASE}/image/:encodedPrompt`, () => {
         return new HttpResponse(null, { status: 500, statusText: 'Server Error' });
       })
     );
@@ -172,13 +190,13 @@ describe('generatePollinationsVideo', () => {
 });
 
 describe('generatePollinationsText', () => {
-  it('sends correct request body', async () => {
+  it('sends correct request body to v1/chat/completions', async () => {
     const { generatePollinationsText } = await importPollinations();
     let requestBody: Record<string, unknown> = {};
     testServer.use(
-      http.post('https://text.pollinations.ai/', async ({ request }) => {
+      http.post(`${BASE}/v1/chat/completions`, async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json('response');
+        return HttpResponse.json({ choices: [{ message: { content: 'ok' } }] });
       })
     );
 
@@ -197,9 +215,9 @@ describe('generatePollinationsText', () => {
     const { generatePollinationsText } = await importPollinations();
     let requestBody: Record<string, unknown> = {};
     testServer.use(
-      http.post('https://text.pollinations.ai/', async ({ request }) => {
+      http.post(`${BASE}/v1/chat/completions`, async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.json('response');
+        return HttpResponse.json({ choices: [{ message: { content: 'ok' } }] });
       })
     );
 
@@ -215,7 +233,7 @@ describe('generatePollinationsText', () => {
   it('throws on non-ok response', async () => {
     const { generatePollinationsText } = await importPollinations();
     testServer.use(
-      http.post('https://text.pollinations.ai/', () => {
+      http.post(`${BASE}/v1/chat/completions`, () => {
         return new HttpResponse(null, { status: 500, statusText: 'Server Error' });
       })
     );
@@ -227,7 +245,7 @@ describe('generatePollinationsText', () => {
 });
 
 describe('fetchPollinationsModels', () => {
-  it('returns an array of PollinationsModelInfo objects', async () => {
+  it('returns model info objects for image type', async () => {
     const { fetchPollinationsModels } = await importPollinations();
     const models = await fetchPollinationsModels('image');
     expect(Array.isArray(models)).toBe(true);
@@ -236,9 +254,19 @@ describe('fetchPollinationsModels', () => {
     expect(models[0]).toHaveProperty('name');
   });
 
+  it('parses rich model objects with modalities', async () => {
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('image');
+    expect(models[0].id).toBe('flux');
+    expect(models[0].input_modalities).toEqual(['text']);
+    expect(models[0].output_modalities).toEqual(['image']);
+    expect(models[1].id).toBe('kontext');
+    expect(models[1].input_modalities).toEqual(['text', 'image']);
+  });
+
   it('handles array-of-strings response', async () => {
     testServer.use(
-      http.get('https://image.pollinations.ai/models', () => {
+      http.get(`${BASE}/image/models`, () => {
         return HttpResponse.json(['flux', 'turbo']);
       })
     );
@@ -251,27 +279,10 @@ describe('fetchPollinationsModels', () => {
     ]);
   });
 
-  it('handles array-of-objects response', async () => {
-    testServer.use(
-      http.get('https://image.pollinations.ai/models', () => {
-        return HttpResponse.json([
-          { id: 'flux', name: 'FLUX.1', type: 'image', capabilities: ['fast'] },
-        ]);
-      })
-    );
-
-    const { fetchPollinationsModels } = await importPollinations();
-    const models = await fetchPollinationsModels('image');
-    expect(models[0].id).toBe('flux');
-    expect(models[0].name).toBe('FLUX.1');
-    expect(models[0].type).toBe('image');
-    expect(models[0].capabilities).toEqual(['fast']);
-  });
-
   it('returns empty array on failure', async () => {
     const { fetchPollinationsModels } = await importPollinations();
     testServer.use(
-      http.get('https://image.pollinations.ai/models', () => {
+      http.get(`${BASE}/image/models`, () => {
         return new HttpResponse(null, { status: 500 });
       })
     );
@@ -283,12 +294,19 @@ describe('fetchPollinationsModels', () => {
   it('returns empty array on network error', async () => {
     const { fetchPollinationsModels } = await importPollinations();
     testServer.use(
-      http.get('https://image.pollinations.ai/models', () => {
+      http.get(`${BASE}/image/models`, () => {
         return HttpResponse.error();
       })
     );
 
     const models = await fetchPollinationsModels('image');
     expect(models).toEqual([]);
+  });
+
+  it('uses /models for text type', async () => {
+    const { fetchPollinationsModels } = await importPollinations();
+    const models = await fetchPollinationsModels('text');
+    expect(models.length).toBe(2);
+    expect(models[0].id).toBe('openai');
   });
 });

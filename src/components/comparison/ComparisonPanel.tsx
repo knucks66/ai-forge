@@ -59,7 +59,7 @@ export function ComparisonPanel() {
       try {
         if (mode === 'image') {
           if (slot.provider === 'pollinations') {
-            if (!pollinationsKey) throw new Error('Pollinations API key required');
+            if (!pollinationsKey) throw new Error('Pollinations API key required. Add it in Settings.');
             const result = await generatePollinationsImage(prompt, { model: slot.model });
             setSlot((s) => ({ ...s, result: result.url, resultBlob: result.blob, isGenerating: false }));
           } else {
@@ -71,7 +71,6 @@ export function ComparisonPanel() {
           const messages = [{ role: 'user', content: prompt }];
           let response: Response;
           if (slot.provider === 'pollinations') {
-            if (!pollinationsKey) throw new Error('Pollinations API key required');
             response = await generatePollinationsText(messages, { model: slot.model, stream: false });
           } else {
             if (!hfToken) throw new Error('HuggingFace token required');

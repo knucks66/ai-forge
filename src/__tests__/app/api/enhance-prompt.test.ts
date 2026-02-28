@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest
 import { server } from '@/test/msw/server';
 import { http, HttpResponse } from 'msw';
 
+const POLL_BASE = 'https://gen.pollinations.ai';
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
@@ -37,9 +39,9 @@ async function importRoute() {
 describe('POST /api/enhance-prompt', () => {
   it('returns enhanced prompt on success', async () => {
     server.use(
-      http.post('https://text.pollinations.ai/', async () => {
-        return new HttpResponse('A beautifully enhanced image of a sunset over mountains', {
-          headers: { 'Content-Type': 'text/plain' },
+      http.post(`${POLL_BASE}/v1/chat/completions`, async () => {
+        return HttpResponse.json({
+          choices: [{ message: { content: 'A beautifully enhanced image of a sunset over mountains' } }],
         });
       })
     );
@@ -58,7 +60,7 @@ describe('POST /api/enhance-prompt', () => {
 
   it('returns error on API failure', async () => {
     server.use(
-      http.post('https://text.pollinations.ai/', () => {
+      http.post(`${POLL_BASE}/v1/chat/completions`, () => {
         return new HttpResponse(null, { status: 500 });
       })
     );
@@ -77,10 +79,10 @@ describe('POST /api/enhance-prompt', () => {
   it('uses different system prompt for non-image type', async () => {
     let capturedBody: Record<string, unknown> = {};
     server.use(
-      http.post('https://text.pollinations.ai/', async ({ request }) => {
+      http.post(`${POLL_BASE}/v1/chat/completions`, async ({ request }) => {
         capturedBody = (await request.json()) as Record<string, unknown>;
-        return new HttpResponse('Enhanced text prompt', {
-          headers: { 'Content-Type': 'text/plain' },
+        return HttpResponse.json({
+          choices: [{ message: { content: 'Enhanced text prompt' } }],
         });
       })
     );

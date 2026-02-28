@@ -23,11 +23,6 @@ export function AudioPanel() {
       return;
     }
 
-    if (!pollinationsKey) {
-      toast.error('Pollinations API key required. Add it in Settings.');
-      return;
-    }
-
     store.setIsGenerating(true);
     store.setError(null);
     store.setAudioUrl(null);

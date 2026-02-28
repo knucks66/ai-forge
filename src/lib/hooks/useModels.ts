@@ -46,13 +46,15 @@ export function useModels() {
 
       if (pollinationsImageModels.status === 'fulfilled' && pollinationsImageModels.value.length > 0) {
         for (const modelInfo of pollinationsImageModels.value) {
+          const isVideo = modelInfo.output_modalities?.includes('video') || POLLINATIONS_VIDEO_MODELS.has(modelInfo.id);
+          const acceptsImage = modelInfo.input_modalities?.includes('image');
           const caps = getPollinationsCapabilities(modelInfo.id, {
-            type: modelInfo.type,
-            capabilities: modelInfo.capabilities,
+            input_modalities: modelInfo.input_modalities,
+            output_modalities: modelInfo.output_modalities,
           });
 
           // Separate video models from image models
-          if (POLLINATIONS_VIDEO_MODELS.has(modelInfo.id) || modelInfo.type === 'video') {
+          if (isVideo) {
             pollinationsVideoModels.push({
               id: modelInfo.id,
               name: modelInfo.name || formatModelName(modelInfo.id),

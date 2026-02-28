@@ -25,6 +25,8 @@ interface ImageState {
   inputImageUrl: string | null;
   inputImageBlob: Blob | null;
   strength: number;
+  nsfwDetected: boolean;
+  nsfwRevealed: boolean;
 
   setPrompt: (prompt: string) => void;
   setNegativePrompt: (prompt: string) => void;
@@ -49,6 +51,8 @@ interface ImageState {
   setStrength: (strength: number) => void;
   clearInputImage: () => void;
   refineCurrentImage: () => void;
+  setNsfwDetected: (detected: boolean) => void;
+  setNsfwRevealed: (revealed: boolean) => void;
   reset: () => void;
 }
 
@@ -75,6 +79,8 @@ const initialState = {
   inputImageUrl: null as string | null,
   inputImageBlob: null as Blob | null,
   strength: 0.75,
+  nsfwDetected: false,
+  nsfwRevealed: false,
 };
 
 export const useImageStore = create<ImageState>()(
@@ -111,6 +117,8 @@ export const useImageStore = create<ImageState>()(
         inputImageBlob: null,
         mode: 'text-to-image',
       }),
+      setNsfwDetected: (detected) => set({ nsfwDetected: detected }),
+      setNsfwRevealed: (revealed) => set({ nsfwRevealed: revealed }),
       refineCurrentImage: () => {
         const state = get();
         if (state.generatedImageUrl && state.generatedImageBlob) {

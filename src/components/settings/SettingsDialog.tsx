@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useAppStore } from '@/stores/useAppStore';
-import { X, Eye, EyeOff, CheckCircle, XCircle, Loader2, Key, Palette, Shield } from 'lucide-react';
+import { X, Eye, EyeOff, CheckCircle, XCircle, Loader2, Key, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import toast from 'react-hot-toast';
 
@@ -12,11 +12,10 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const { hfToken, pollinationsKey, nsfwEnabled, setHfToken, setPollinationsKey, setNsfwEnabled } = useSettingsStore();
+  const { hfToken, pollinationsKey, setHfToken, setPollinationsKey } = useSettingsStore();
   const { theme, setTheme } = useAppStore();
   const [showHfToken, setShowHfToken] = useState(false);
   const [showPollKey, setShowPollKey] = useState(false);
-  const [showNsfwConfirm, setShowNsfwConfirm] = useState(false);
   const [testingHf, setTestingHf] = useState(false);
   const [testingPoll, setTestingPoll] = useState(false);
   const [hfStatus, setHfStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -132,19 +131,18 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                 </div>
                 <button
                   onClick={async () => {
-                    if (!pollinationsKey) { toast.error('Please enter a Pollinations key first'); return; }
                     setTestingPoll(true);
                     setPollStatus('idle');
                     try {
-                      const res = await fetch('https://text.pollinations.ai/models', {
-                        headers: { Authorization: `Bearer ${pollinationsKey}` },
-                      });
+                      const headers: Record<string, string> = {};
+                      if (pollinationsKey) headers['Authorization'] = `Bearer ${pollinationsKey}`;
+                      const res = await fetch('https://gen.pollinations.ai/models', { headers });
                       if (res.ok) {
                         setPollStatus('success');
                         toast.success('Pollinations connection successful!');
                       } else {
                         setPollStatus('error');
-                        toast.error('Invalid Pollinations key');
+                        toast.error('Pollinations connection failed');
                       }
                     } catch {
                       setPollStatus('error');
@@ -172,69 +170,6 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                 </a>
               </p>
             </div>
-          </section>
-
-          {/* Content Settings */}
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-accent" />
-              <h3 className="font-medium">Content Settings</h3>
-            </div>
-            <div className="flex items-center justify-between p-3 border border-border rounded-lg">
-              <div>
-                <p className="text-sm font-medium">NSFW Content</p>
-                <p className="text-xs text-muted">Enable generation of adult/explicit content. Disabled by default (PG-13 mode).</p>
-              </div>
-              <button
-                onClick={() => {
-                  if (!nsfwEnabled) {
-                    setShowNsfwConfirm(true);
-                  } else {
-                    setNsfwEnabled(false);
-                    toast.success('NSFW content disabled');
-                  }
-                }}
-                className={cn(
-                  'relative w-11 h-6 rounded-full transition-colors flex-shrink-0',
-                  nsfwEnabled ? 'bg-red-500' : 'bg-gray-600'
-                )}
-              >
-                <span
-                  className={cn(
-                    'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform',
-                    nsfwEnabled && 'translate-x-5'
-                  )}
-                />
-              </button>
-            </div>
-            {nsfwEnabled && (
-              <p className="text-xs text-yellow-500 px-1 mt-2">
-                ⚠ NSFW mode is enabled. Adult style presets are visible and safety negative prompts are disabled.
-              </p>
-            )}
-            {showNsfwConfirm && (
-              <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg space-y-2">
-                <p className="text-sm text-red-400">Are you sure? This enables adult content generation.</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setNsfwEnabled(true);
-                      setShowNsfwConfirm(false);
-                      toast.success('NSFW content enabled');
-                    }}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => setShowNsfwConfirm(false)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-hover text-muted hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
           </section>
 
           {/* Appearance Section */}

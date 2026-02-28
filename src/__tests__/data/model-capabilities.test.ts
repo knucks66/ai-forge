@@ -53,18 +53,21 @@ describe('model-capabilities', () => {
       expect(caps.supportsVideoOutput).toBeUndefined();
     });
 
-    it('respects API metadata for image-input', () => {
+    it('respects API metadata with input_modalities for image-input', () => {
       const caps = getPollinationsCapabilities('new-model', {
-        capabilities: ['image-input'],
+        input_modalities: ['text', 'image'],
+        output_modalities: ['image'],
       });
       expect(caps.supportsImageInput).toBe(true);
     });
 
-    it('respects API metadata for video type', () => {
+    it('respects API metadata with output_modalities for video', () => {
       const caps = getPollinationsCapabilities('new-video', {
-        type: 'video',
+        input_modalities: ['text', 'image'],
+        output_modalities: ['video'],
       });
       expect(caps.supportsVideoOutput).toBe(true);
+      expect(caps.supportsImageToVideo).toBe(true);
     });
   });
 

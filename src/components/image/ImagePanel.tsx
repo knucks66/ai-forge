@@ -19,15 +19,16 @@ import { saveGalleryItem, generateThumbnail } from '@/lib/db';
 import { randomSeed } from '@/lib/utils/seed';
 import { cn } from '@/lib/utils/cn';
 import { v4 as uuid } from 'uuid';
-import { Download, RefreshCw, Maximize2, Wand2, Upload } from 'lucide-react';
+import { Download, RefreshCw, Maximize2, Wand2, Upload, ShieldAlert } from 'lucide-react';
 import { downloadBlob } from '@/lib/utils/download';
 import toast from 'react-hot-toast';
 import { useState, useCallback } from 'react';
 import { validateImageFile } from '@/lib/utils/image';
+import { detectNsfwPrompt, isNsfwPreset } from '@/lib/utils/nsfw-detect';
 
 export function ImagePanel() {
   const store = useImageStore();
-  const { hfToken, pollinationsKey, nsfwEnabled } = useSettingsStore();
+  const { hfToken, pollinationsKey, nsfwEnabled, setNsfwEnabled } = useSettingsStore();
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
@@ -52,7 +53,7 @@ export function ImagePanel() {
     }
 
     if (store.provider === 'pollinations' && !pollinationsKey) {
-      toast.error('Pollinations API key required. Add it in Settings.');
+      toast.error('Pollinations API key required for image generation. Add it in Settings.');
       return;
     }
 
@@ -65,6 +66,8 @@ export function ImagePanel() {
     store.setError(null);
     store.setGeneratedImageUrl(null);
     store.setGeneratedImageBlob(null);
+    store.setNsfwDetected(false);
+    store.setNsfwRevealed(false);
 
     const startTime = Date.now();
     const seed = store.useRandomSeed ? randomSeed() : store.seed;
@@ -158,6 +161,11 @@ export function ImagePanel() {
         isFavorite: false,
         tags: preset ? [preset.name] : [],
       });
+
+      // Detect NSFW content from prompt/preset
+      const isNsfw = detectNsfwPrompt(fullPrompt) || isNsfwPreset(store.stylePreset, stylePresets);
+      store.setNsfwDetected(isNsfw);
+      store.setNsfwRevealed(false);
 
       toast.success(`Image generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
     } catch (error) {
@@ -283,47 +291,75 @@ export function ImagePanel() {
           'relative w-full h-full flex items-center justify-center rounded-xl border border-border bg-surface/50',
           store.isGenerating && 'animate-pulse'
         )}>
-          {store.generatedImageUrl ? (
-            <>
-              <img
-                src={store.generatedImageUrl}
-                alt={store.prompt}
-                className="max-w-full max-h-full object-contain rounded-lg"
-                onClick={() => setFullscreen(true)}
-              />
-              {/* Image actions */}
-              <div className="absolute top-3 right-3 flex gap-2">
-                <button
-                  onClick={handleDownload}
-                  className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  title="Download"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setFullscreen(true)}
-                  className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  title="Fullscreen"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => store.refineCurrentImage()}
-                  className="p-2 rounded-lg bg-black/50 text-white hover:bg-accent/70 transition-colors"
-                  title="Refine this image"
-                >
-                  <Wand2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleGenerate}
-                  className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  title="Regenerate"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-            </>
-          ) : store.isGenerating ? (
+          {store.generatedImageUrl ? (() => {
+            const isBlurred = store.nsfwDetected && !nsfwEnabled && !store.nsfwRevealed;
+            return (
+              <>
+                <div className="relative max-w-full max-h-full">
+                  <img
+                    src={store.generatedImageUrl}
+                    alt={store.prompt}
+                    className={cn(
+                      'max-w-full max-h-full object-contain rounded-lg',
+                      isBlurred && 'blur-xl scale-[1.02]'
+                    )}
+                    onClick={() => {
+                      if (!isBlurred) setFullscreen(true);
+                    }}
+                  />
+                  {/* NSFW overlay */}
+                  {isBlurred && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/30 rounded-lg">
+                      <ShieldAlert className="w-10 h-10 text-yellow-500" />
+                      <p className="text-sm text-white font-medium">This image may contain adult content</p>
+                      <button
+                        onClick={() => {
+                          setNsfwEnabled(true);
+                          store.setNsfwRevealed(true);
+                        }}
+                        className="px-4 py-2 rounded-lg text-xs font-medium bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-colors border border-yellow-500/30"
+                      >
+                        Enable NSFW to view
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* Image actions - only show when not blurred */}
+                {!isBlurred && (
+                  <div className="absolute top-3 right-3 flex gap-2">
+                    <button
+                      onClick={handleDownload}
+                      className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
+                      title="Download"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setFullscreen(true)}
+                      className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
+                      title="Fullscreen"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => store.refineCurrentImage()}
+                      className="p-2 rounded-lg bg-black/50 text-white hover:bg-accent/70 transition-colors"
+                      title="Refine this image"
+                    >
+                      <Wand2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleGenerate}
+                      className="p-2 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors"
+                      title="Regenerate"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })() : store.isGenerating ? (
             <div className="text-center space-y-3">
               <div className="w-16 h-16 border-4 border-accent/30 border-t-accent rounded-full animate-spin mx-auto" />
               <p className="text-sm text-muted">

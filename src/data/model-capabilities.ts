@@ -38,23 +38,24 @@ export const HF_IMAGE_TO_VIDEO_MODELS = new Set([
 
 /**
  * Get capabilities for a Pollinations model based on known model sets
- * and optional API metadata.
+ * and optional API metadata (input_modalities / output_modalities).
  */
 export function getPollinationsCapabilities(
   modelId: string,
-  apiMeta?: { type?: string; capabilities?: string[] }
+  apiMeta?: { input_modalities?: string[]; output_modalities?: string[] }
 ): ModelCapabilities {
   const caps: ModelCapabilities = {};
 
-  // Check API metadata first
-  if (apiMeta?.capabilities?.includes('image-input')) {
+  // Check API metadata first (new gen.pollinations.ai format)
+  if (apiMeta?.input_modalities?.includes('image')) {
     caps.supportsImageInput = true;
   }
-  if (apiMeta?.type === 'video' || apiMeta?.capabilities?.includes('video-output')) {
+  if (apiMeta?.output_modalities?.includes('video')) {
     caps.supportsVideoOutput = true;
-  }
-  if (apiMeta?.capabilities?.includes('image-to-video')) {
-    caps.supportsImageToVideo = true;
+    // If it also accepts image input, it supports image-to-video
+    if (apiMeta?.input_modalities?.includes('image')) {
+      caps.supportsImageToVideo = true;
+    }
   }
 
   // Fallback to known model sets

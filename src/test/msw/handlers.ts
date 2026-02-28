@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw';
 
+const POLL_BASE = 'https://gen.pollinations.ai';
+
 // Helper: create a fake binary response (use ArrayBuffer, not Blob, for jsdom compat)
 function binaryResponse(data: string, contentType: string) {
   const buffer = new TextEncoder().encode(data).buffer;
@@ -9,19 +11,28 @@ function binaryResponse(data: string, contentType: string) {
 }
 
 export const handlers = [
-  // Pollinations image generation
-  http.get('https://image.pollinations.ai/prompt/:prompt', () => {
+  // Pollinations image/models MUST come before /image/:prompt to avoid being caught
+  http.get(`${POLL_BASE}/image/models`, () => {
+    return HttpResponse.json([
+      { name: 'flux', description: 'Flux Schnell', input_modalities: ['text'], output_modalities: ['image'] },
+      { name: 'turbo', description: 'Turbo', input_modalities: ['text'], output_modalities: ['image'] },
+      { name: 'flux-realism', description: 'Flux Realism', input_modalities: ['text'], output_modalities: ['image'] },
+    ]);
+  }),
+
+  // Pollinations image generation (new API: /image/{prompt})
+  http.get(`${POLL_BASE}/image/:prompt`, () => {
     return binaryResponse('fake-image-data', 'image/png');
   }),
 
-  // Pollinations text generation
-  http.post('https://text.pollinations.ai/', async ({ request }) => {
+  // Pollinations text generation (OpenAI-compatible)
+  http.post(`${POLL_BASE}/v1/chat/completions`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     if (body.stream) {
       const stream = new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: {"content":"Hello"}\n\n'));
-          controller.enqueue(new TextEncoder().encode('data: {"content":" world"}\n\n'));
+          controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"Hello"}}]}\n\n'));
+          controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":" world"}}]}\n\n'));
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
           controller.close();
         },
@@ -30,11 +41,11 @@ export const handlers = [
         headers: { 'Content-Type': 'text/event-stream' },
       });
     }
-    return HttpResponse.json('Enhanced prompt with rich detail');
+    return HttpResponse.json({ choices: [{ message: { content: 'Enhanced prompt with rich detail' } }] });
   }),
 
   // Pollinations audio generation
-  http.get('https://text.pollinations.ai/*', ({ request }) => {
+  http.get(`${POLL_BASE}/text/*`, ({ request }) => {
     const url = new URL(request.url);
     if (url.searchParams.get('model') === 'openai-audio') {
       return binaryResponse('fake-audio-data', 'audio/mpeg');
@@ -42,13 +53,13 @@ export const handlers = [
     return HttpResponse.json(['model-1', 'model-2']);
   }),
 
-  // Pollinations models
-  http.get('https://image.pollinations.ai/models', () => {
-    return HttpResponse.json(['flux', 'turbo', 'flux-realism']);
-  }),
-
-  http.get('https://text.pollinations.ai/models', () => {
-    return HttpResponse.json(['openai', 'mistral', 'llama']);
+  // Pollinations text/general models
+  http.get(`${POLL_BASE}/models`, () => {
+    return HttpResponse.json([
+      { name: 'openai', description: 'GPT-5 Mini', input_modalities: ['text'], output_modalities: ['text'] },
+      { name: 'mistral', description: 'Mistral', input_modalities: ['text'], output_modalities: ['text'] },
+      { name: 'llama', description: 'Llama', input_modalities: ['text'], output_modalities: ['text'] },
+    ]);
   }),
 
   // HuggingFace whoami (connection test)

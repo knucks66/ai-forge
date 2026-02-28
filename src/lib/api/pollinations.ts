@@ -1,5 +1,12 @@
 import { useSettingsStore } from '@/stores/useSettingsStore';
 
+const BASE_URL = 'https://gen.pollinations.ai';
+
+/**
+ * Build auth headers for Pollinations API.
+ * The new gen.pollinations.ai API accepts Bearer tokens and
+ * handles CORS properly, unlike the old image.pollinations.ai.
+ */
 function getAuthHeaders(): Record<string, string> {
   const key = useSettingsStore.getState().pollinationsKey;
   const headers: Record<string, string> = {};
@@ -10,8 +17,10 @@ function getAuthHeaders(): Record<string, string> {
 export interface PollinationsModelInfo {
   id: string;
   name: string;
-  type?: string;
-  capabilities?: string[];
+  description?: string;
+  input_modalities?: string[];
+  output_modalities?: string[];
+  paid_only?: boolean;
 }
 
 export async function generatePollinationsImage(
@@ -38,10 +47,14 @@ export async function generatePollinationsImage(
   if (options.negative_prompt) params.set('negative_prompt', options.negative_prompt);
 
   const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?${params.toString()}`;
+  const url = `${BASE_URL}/image/${encodedPrompt}?${params.toString()}`;
 
   const response = await fetch(url, { headers: getAuthHeaders() });
-  if (!response.ok) throw new Error(`Pollinations image generation failed: ${response.statusText}`);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => null);
+    const msg = errBody?.error?.message || response.statusText;
+    throw new Error(`Pollinations image generation failed: ${msg}`);
+  }
 
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -67,10 +80,14 @@ export async function generatePollinationsVideo(
   params.set('nologo', 'true');
 
   const encodedPrompt = encodeURIComponent(prompt);
-  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?${params.toString()}`;
+  const url = `${BASE_URL}/image/${encodedPrompt}?${params.toString()}`;
 
   const response = await fetch(url, { headers: getAuthHeaders() });
-  if (!response.ok) throw new Error(`Pollinations video generation failed: ${response.statusText}`);
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => null);
+    const msg = errBody?.error?.message || response.statusText;
+    throw new Error(`Pollinations video generation failed: ${msg}`);
+  }
 
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -87,7 +104,7 @@ export async function generatePollinationsText(
     stream?: boolean;
   } = {}
 ): Promise<Response> {
-  const response = await fetch('https://text.pollinations.ai/', {
+  const response = await fetch(`${BASE_URL}/v1/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -112,7 +129,7 @@ export async function generatePollinationsAudio(
   voice: string = 'alloy'
 ): Promise<{ url: string; blob: Blob }> {
   const encodedText = encodeURIComponent(text);
-  const url = `https://text.pollinations.ai/${encodedText}?model=openai-audio&voice=${voice}`;
+  const url = `${BASE_URL}/text/${encodedText}?model=openai-audio&voice=${voice}`;
 
   const response = await fetch(url, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error(`Pollinations audio generation failed: ${response.statusText}`);
@@ -124,33 +141,32 @@ export async function generatePollinationsAudio(
 
 /**
  * Fetch available models from Pollinations.
- * Handles both array-of-strings and array-of-objects response formats.
+ * The /models endpoint returns rich model objects; /image/models returns image/video models.
  */
 export async function fetchPollinationsModels(
   type: 'image' | 'text' | 'audio'
 ): Promise<PollinationsModelInfo[]> {
   try {
-    let url: string;
-    if (type === 'image') url = 'https://image.pollinations.ai/models';
-    else if (type === 'text') url = 'https://text.pollinations.ai/models';
-    else url = 'https://text.pollinations.ai/models';
+    const url = type === 'image'
+      ? `${BASE_URL}/image/models`
+      : `${BASE_URL}/models`;
 
     const response = await fetch(url, { headers: getAuthHeaders() });
     if (!response.ok) return [];
 
     const data = await response.json();
 
-    // Handle both response formats
     if (Array.isArray(data)) {
-      return data.map((item: string | PollinationsModelInfo) => {
+      return data.map((item: string | Record<string, unknown>) => {
         if (typeof item === 'string') {
           return { id: item, name: item };
         }
         return {
-          id: item.id || '',
-          name: item.name || item.id || '',
-          type: item.type,
-          capabilities: item.capabilities,
+          id: (item.name as string) || '',
+          name: (item.description as string) || (item.name as string) || '',
+          input_modalities: item.input_modalities as string[] | undefined,
+          output_modalities: item.output_modalities as string[] | undefined,
+          paid_only: item.paid_only as boolean | undefined,
         };
       });
     }

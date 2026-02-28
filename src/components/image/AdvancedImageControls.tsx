@@ -22,7 +22,7 @@ const negativeSnippets = [
 
 export function AdvancedImageControls() {
   const store = useImageStore();
-  const nsfwEnabled = useSettingsStore((s) => s.nsfwEnabled);
+  const { nsfwEnabled, setNsfwEnabled } = useSettingsStore();
 
   const activeSnippets = useMemo(() => {
     const current = store.negativePrompt.toLowerCase();
@@ -174,6 +174,19 @@ export function AdvancedImageControls() {
                 <Shuffle className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+
+          {/* NSFW Content */}
+          <div className="border-t border-border pt-3">
+            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
+              <input
+                type="checkbox"
+                checked={nsfwEnabled}
+                onChange={(e) => setNsfwEnabled(e.target.checked)}
+                className="w-3 h-3 accent-accent"
+              />
+              Allow NSFW content
+            </label>
           </div>
         </div>
       )}
