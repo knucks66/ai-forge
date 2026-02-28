@@ -1,3 +1,16 @@
+export async function fetchHfAccountInfo(token: string): Promise<{ username: string; plan: string } | null> {
+  try {
+    const res = await fetch('https://huggingface.co/api/whoami-v2', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { username: data.name || 'Unknown', plan: data.canPay ? 'pro' : 'free' };
+  } catch {
+    return null;
+  }
+}
+
 export async function generateHfImage(
   prompt: string,
   token: string,

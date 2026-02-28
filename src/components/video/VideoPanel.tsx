@@ -8,7 +8,8 @@ import { GenerateButton } from '@/components/shared/GenerateButton';
 import { ImageDropZone } from '@/components/shared/ImageDropZone';
 import { SliderControl } from '@/components/shared/SliderControl';
 import { generateHfVideo, generateHfImageToVideo } from '@/lib/api/huggingface';
-import { generatePollinationsVideo } from '@/lib/api/pollinations';
+import { generatePollinationsVideo, fetchPollinationsBalance } from '@/lib/api/pollinations';
+import { useBalanceStore } from '@/stores/useBalanceStore';
 import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem } from '@/lib/db';
 import { downloadBlob } from '@/lib/utils/download';
@@ -107,6 +108,19 @@ export function VideoPanel() {
       });
 
       toast.success(`Video generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+
+      // Refresh Pollinations balance after generation
+      if (store.provider === 'pollinations') {
+        fetchPollinationsBalance().then((result) => {
+          if (result) {
+            const current = useBalanceStore.getState().pollinations;
+            useBalanceStore.getState().setPollinationsAccount({
+              ...current,
+              balance: result.balance,
+            });
+          }
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Video generation failed';
       store.setError(message);

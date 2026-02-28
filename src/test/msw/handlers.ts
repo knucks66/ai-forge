@@ -62,11 +62,25 @@ export const handlers = [
     ]);
   }),
 
+  // Pollinations account balance
+  http.get(`${POLL_BASE}/account/balance`, ({ request }) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ balance: 5.42 });
+  }),
+
+  // Pollinations account profile
+  http.get(`${POLL_BASE}/account/profile`, ({ request }) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ tier: 'seed', next_reset: '2026-03-01' });
+  }),
+
   // HuggingFace whoami (connection test)
   http.get('https://huggingface.co/api/whoami-v2', ({ request }) => {
     const auth = request.headers.get('Authorization');
     if (auth === 'Bearer valid-token') {
-      return HttpResponse.json({ name: 'test-user' });
+      return HttpResponse.json({ name: 'test-user', canPay: false });
     }
     return new HttpResponse(null, { status: 401 });
   }),

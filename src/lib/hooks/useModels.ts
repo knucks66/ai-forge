@@ -62,6 +62,7 @@ export function useModels() {
               type: 'video',
               tags: [],
               capabilities: caps,
+              paidOnly: modelInfo.paid_only,
             });
           } else {
             imageModels.push({
@@ -71,6 +72,7 @@ export function useModels() {
               type: 'image',
               tags: [],
               capabilities: Object.keys(caps).length > 0 ? caps : undefined,
+              paidOnly: modelInfo.paid_only,
             });
           }
         }
@@ -108,6 +110,7 @@ export function useModels() {
             provider: 'pollinations' as const,
             type: 'text' as const,
             tags: [] as string[],
+            paidOnly: modelInfo.paid_only,
           }))
         );
       } else {
@@ -139,6 +142,7 @@ export function useModels() {
             provider: 'pollinations' as const,
             type: 'audio' as const,
             tags: [] as string[],
+            paidOnly: modelInfo.paid_only,
           }))
         );
       } else {

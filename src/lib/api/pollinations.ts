@@ -139,6 +139,26 @@ export async function generatePollinationsAudio(
   return { url: objectUrl, blob };
 }
 
+export async function fetchPollinationsBalance(): Promise<{ balance: number } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/account/balance`, { headers: getAuthHeaders() });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchPollinationsProfile(): Promise<{ tier?: string; next_reset?: string } | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/account/profile`, { headers: getAuthHeaders() });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fetch available models from Pollinations.
  * The /models endpoint returns rich model objects; /image/models returns image/video models.

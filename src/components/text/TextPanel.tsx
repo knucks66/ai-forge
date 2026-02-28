@@ -7,7 +7,8 @@ import { SliderControl } from '@/components/shared/SliderControl';
 import { ChatMessages } from './ChatMessages';
 import { ChatInput } from './ChatInput';
 import { SystemPromptInput } from './SystemPromptInput';
-import { generatePollinationsText } from '@/lib/api/pollinations';
+import { generatePollinationsText, fetchPollinationsBalance } from '@/lib/api/pollinations';
+import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfText } from '@/lib/api/huggingface';
 import { v4 as uuid } from 'uuid';
 import { Trash2, ChevronDown, Settings2 } from 'lucide-react';
@@ -115,6 +116,18 @@ export function TextPanel() {
       if (!fullContent && response.headers.get('content-type')?.includes('text/plain')) {
         fullContent = await response.text();
         store.updateLastAssistantMessage(fullContent);
+      }
+      // Refresh Pollinations balance after generation
+      if (store.provider === 'pollinations') {
+        fetchPollinationsBalance().then((result) => {
+          if (result) {
+            const current = useBalanceStore.getState().pollinations;
+            useBalanceStore.getState().setPollinationsAccount({
+              ...current,
+              balance: result.balance,
+            });
+          }
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Generation failed';

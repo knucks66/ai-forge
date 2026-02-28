@@ -12,7 +12,8 @@ import { CanvasSizeSelector } from './CanvasSizeSelector';
 import { AdvancedImageControls } from './AdvancedImageControls';
 import { stylePresets } from '@/data/style-presets';
 import { canvasSizes } from '@/data/canvas-sizes';
-import { generatePollinationsImage } from '@/lib/api/pollinations';
+import { generatePollinationsImage, fetchPollinationsBalance } from '@/lib/api/pollinations';
+import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfImage, generateHfImageToImage } from '@/lib/api/huggingface';
 import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem, generateThumbnail } from '@/lib/db';
@@ -168,6 +169,19 @@ export function ImagePanel() {
       store.setNsfwRevealed(false);
 
       toast.success(`Image generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+
+      // Refresh Pollinations balance after generation
+      if (store.provider === 'pollinations') {
+        fetchPollinationsBalance().then((result) => {
+          if (result) {
+            const current = useBalanceStore.getState().pollinations;
+            useBalanceStore.getState().setPollinationsAccount({
+              ...current,
+              balance: result.balance,
+            });
+          }
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Generation failed';
       store.setError(message);

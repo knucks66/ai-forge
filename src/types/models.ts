@@ -13,6 +13,7 @@ export interface ModelOption {
   description?: string;
   tags?: string[];
   capabilities?: ModelCapabilities;
+  paidOnly?: boolean;
 }
 
 export interface ModelsState {

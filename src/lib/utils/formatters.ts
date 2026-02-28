@@ -27,3 +27,9 @@ export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength - 3) + '...';
 }
+
+export function formatCredits(credits: number): string {
+  if (credits >= 1000) return `${(credits / 1000).toFixed(1)}K`;
+  if (credits >= 1) return credits.toFixed(2);
+  return credits.toFixed(4);
+}

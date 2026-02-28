@@ -211,6 +211,47 @@ describe('generateHfImageToVideo', () => {
   });
 });
 
+describe('fetchHfAccountInfo', () => {
+  it('returns username and plan for valid token', async () => {
+    const { fetchHfAccountInfo } = await importHuggingface();
+    server.use(
+      http.get('https://huggingface.co/api/whoami-v2', () => {
+        return HttpResponse.json({ name: 'testuser', canPay: true });
+      })
+    );
+    const result = await fetchHfAccountInfo('valid-token');
+    expect(result).toEqual({ username: 'testuser', plan: 'pro' });
+  });
+
+  it('returns free plan when canPay is false', async () => {
+    const { fetchHfAccountInfo } = await importHuggingface();
+    server.use(
+      http.get('https://huggingface.co/api/whoami-v2', () => {
+        return HttpResponse.json({ name: 'freeuser', canPay: false });
+      })
+    );
+    const result = await fetchHfAccountInfo('valid-token');
+    expect(result).toEqual({ username: 'freeuser', plan: 'free' });
+  });
+
+  it('returns null on 401', async () => {
+    const { fetchHfAccountInfo } = await importHuggingface();
+    const result = await fetchHfAccountInfo('invalid-token');
+    expect(result).toBeNull();
+  });
+
+  it('returns Unknown username when name is missing', async () => {
+    const { fetchHfAccountInfo } = await importHuggingface();
+    server.use(
+      http.get('https://huggingface.co/api/whoami-v2', () => {
+        return HttpResponse.json({ canPay: false });
+      })
+    );
+    const result = await fetchHfAccountInfo('valid-token');
+    expect(result).toEqual({ username: 'Unknown', plan: 'free' });
+  });
+});
+
 describe('fetchHfModels', () => {
   it('returns normalized model array', async () => {
     const { fetchHfModels } = await importHuggingface();

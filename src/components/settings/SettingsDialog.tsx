@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useAppStore } from '@/stores/useAppStore';
-import { X, Eye, EyeOff, CheckCircle, XCircle, Loader2, Key, Palette } from 'lucide-react';
+import { X, Eye, EyeOff, CheckCircle, XCircle, Loader2, Key, Palette, Wallet, RefreshCw } from 'lucide-react';
+import { useBalance } from '@/lib/hooks/useBalance';
+import { formatCredits } from '@/lib/utils/formatters';
 import { cn } from '@/lib/utils/cn';
 import toast from 'react-hot-toast';
 
@@ -20,6 +22,13 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
   const [testingPoll, setTestingPoll] = useState(false);
   const [hfStatus, setHfStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [pollStatus, setPollStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const {
+    pollinations: pollAccount,
+    huggingface: hfAccount,
+    isLoadingPollinations,
+    isLoadingHuggingface,
+    refreshAll,
+  } = useBalance();
 
   const testHfConnection = async () => {
     if (!hfToken) {
@@ -169,6 +178,58 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                   auth.pollinations.ai
                 </a>
               </p>
+            </div>
+          </section>
+
+          {/* Account Status Section */}
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-accent" />
+                <h3 className="font-medium">Account Status</h3>
+              </div>
+              <button
+                onClick={refreshAll}
+                disabled={isLoadingPollinations || isLoadingHuggingface}
+                className="text-xs text-muted hover:text-accent transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {(isLoadingPollinations || isLoadingHuggingface) ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3 h-3" />
+                )}
+                Refresh
+              </button>
+            </div>
+            <div className="space-y-2 text-sm">
+              {/* Pollinations row */}
+              <div className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border border-border">
+                <span className="text-muted">Pollinations</span>
+                <span className="text-foreground">
+                  {!pollinationsKey
+                    ? <span className="text-muted text-xs">No API key set</span>
+                    : isLoadingPollinations
+                    ? <Loader2 className="w-3 h-3 animate-spin inline" />
+                    : pollAccount
+                    ? <>{formatCredits(pollAccount.balance)} credits{pollAccount.tier ? ` · ${pollAccount.tier} tier` : ''}</>
+                    : <span className="text-red-400 text-xs">Unable to fetch</span>
+                  }
+                </span>
+              </div>
+              {/* HuggingFace row */}
+              <div className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border border-border">
+                <span className="text-muted">HuggingFace</span>
+                <span className="text-foreground">
+                  {!hfToken
+                    ? <span className="text-muted text-xs">No token set</span>
+                    : isLoadingHuggingface
+                    ? <Loader2 className="w-3 h-3 animate-spin inline" />
+                    : hfAccount
+                    ? <>{hfAccount.username} · {hfAccount.plan}</>
+                    : <span className="text-red-400 text-xs">Unable to fetch</span>
+                  }
+                </span>
+              </div>
             </div>
           </section>
 

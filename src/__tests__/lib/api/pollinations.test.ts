@@ -9,6 +9,18 @@ let capturedRequests: { url: string; headers: Record<string, string> }[] = [];
 const BASE = 'https://gen.pollinations.ai';
 
 const testServer = setupServer(
+  // Account endpoints
+  http.get(`${BASE}/account/balance`, ({ request }) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ balance: 5.42 });
+  }),
+  http.get(`${BASE}/account/profile`, ({ request }) => {
+    const auth = request.headers.get('Authorization');
+    if (!auth) return new HttpResponse(null, { status: 401 });
+    return HttpResponse.json({ tier: 'seed', next_reset: '2026-03-01' });
+  }),
+
   // Models endpoints MUST come before the parameterized /image/:prompt route
   http.get(`${BASE}/image/models`, () => {
     return HttpResponse.json([
@@ -308,5 +320,61 @@ describe('fetchPollinationsModels', () => {
     const models = await fetchPollinationsModels('text');
     expect(models.length).toBe(2);
     expect(models[0].id).toBe('openai');
+  });
+});
+
+describe('fetchPollinationsBalance', () => {
+  it('returns balance when authenticated', async () => {
+    useSettingsStore.setState({ pollinationsKey: 'pk_test123' });
+    const { fetchPollinationsBalance } = await importPollinations();
+    const result = await fetchPollinationsBalance();
+    expect(result).toEqual({ balance: 5.42 });
+  });
+
+  it('returns null when not authenticated', async () => {
+    useSettingsStore.setState({ pollinationsKey: '' });
+    const { fetchPollinationsBalance } = await importPollinations();
+    const result = await fetchPollinationsBalance();
+    expect(result).toBeNull();
+  });
+
+  it('returns null on server error', async () => {
+    useSettingsStore.setState({ pollinationsKey: 'pk_test123' });
+    testServer.use(
+      http.get(`${BASE}/account/balance`, () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+    const { fetchPollinationsBalance } = await importPollinations();
+    const result = await fetchPollinationsBalance();
+    expect(result).toBeNull();
+  });
+});
+
+describe('fetchPollinationsProfile', () => {
+  it('returns profile when authenticated', async () => {
+    useSettingsStore.setState({ pollinationsKey: 'pk_test123' });
+    const { fetchPollinationsProfile } = await importPollinations();
+    const result = await fetchPollinationsProfile();
+    expect(result).toEqual({ tier: 'seed', next_reset: '2026-03-01' });
+  });
+
+  it('returns null when not authenticated', async () => {
+    useSettingsStore.setState({ pollinationsKey: '' });
+    const { fetchPollinationsProfile } = await importPollinations();
+    const result = await fetchPollinationsProfile();
+    expect(result).toBeNull();
+  });
+
+  it('returns null on server error', async () => {
+    useSettingsStore.setState({ pollinationsKey: 'pk_test123' });
+    testServer.use(
+      http.get(`${BASE}/account/profile`, () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+    const { fetchPollinationsProfile } = await importPollinations();
+    const result = await fetchPollinationsProfile();
+    expect(result).toBeNull();
   });
 });
