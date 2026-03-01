@@ -1,5 +1,5 @@
 export type GenerationType = 'image' | 'text' | 'audio' | 'video';
-export type Provider = 'pollinations' | 'huggingface' | 'google';
+export type Provider = 'pollinations' | 'huggingface' | 'google' | 'groq' | 'openrouter';
 
 export interface GenerationParams {
   prompt: string;

@@ -11,6 +11,8 @@ import { generatePollinationsText, fetchPollinationsBalance } from '@/lib/api/po
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfText } from '@/lib/api/huggingface';
 import { generateGoogleText } from '@/lib/api/google';
+import { generateGroqText } from '@/lib/api/groq';
+import { generateOpenRouterText } from '@/lib/api/openrouter';
 import { v4 as uuid } from 'uuid';
 import { Trash2, ChevronDown, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -19,7 +21,7 @@ import { useState } from 'react';
 
 export function TextPanel() {
   const store = useTextStore();
-  const { hfToken, pollinationsKey, googleApiKey } = useSettingsStore();
+  const { hfToken, pollinationsKey, googleApiKey, groqApiKey, openRouterApiKey } = useSettingsStore();
   const [showControls, setShowControls] = useState(false);
 
   const handleSend = async (content: string) => {
@@ -32,6 +34,16 @@ export function TextPanel() {
 
     if (store.provider === 'google' && !googleApiKey) {
       toast.error('Google API key required. Add it in Settings.');
+      return;
+    }
+
+    if (store.provider === 'groq' && !groqApiKey) {
+      toast.error('Groq API key required. Add it in Settings.');
+      return;
+    }
+
+    if (store.provider === 'openrouter' && !openRouterApiKey) {
+      toast.error('OpenRouter API key required. Add it in Settings.');
       return;
     }
 
@@ -74,6 +86,20 @@ export function TextPanel() {
         });
       } else if (store.provider === 'google') {
         response = await generateGoogleText(messages, googleApiKey, {
+          model: store.model,
+          temperature: store.temperature,
+          maxTokens: store.maxTokens,
+          topP: store.topP,
+        });
+      } else if (store.provider === 'groq') {
+        response = await generateGroqText(messages, groqApiKey, {
+          model: store.model,
+          temperature: store.temperature,
+          maxTokens: store.maxTokens,
+          topP: store.topP,
+        });
+      } else if (store.provider === 'openrouter') {
+        response = await generateOpenRouterText(messages, openRouterApiKey, {
           model: store.model,
           temperature: store.temperature,
           maxTokens: store.maxTokens,

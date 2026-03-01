@@ -10,6 +10,8 @@ export function useBalance() {
   const pollinationsKey = useSettingsStore((s) => s.pollinationsKey);
   const hfToken = useSettingsStore((s) => s.hfToken);
   const googleApiKey = useSettingsStore((s) => s.googleApiKey);
+  const groqApiKey = useSettingsStore((s) => s.groqApiKey);
+  const openRouterApiKey = useSettingsStore((s) => s.openRouterApiKey);
   const store = useBalanceStore();
 
   const refreshPollinations = useCallback(async () => {
@@ -79,10 +81,30 @@ export function useBalance() {
     }
   }, [googleApiKey]);
 
+  // Groq — static tier info when key is present
+  useEffect(() => {
+    if (groqApiKey) {
+      store.setGroqAccount({ tier: 'free' });
+    } else {
+      store.setGroqAccount(null);
+    }
+  }, [groqApiKey]);
+
+  // OpenRouter — static tier info when key is present
+  useEffect(() => {
+    if (openRouterApiKey) {
+      store.setOpenRouterAccount({ tier: 'free' });
+    } else {
+      store.setOpenRouterAccount(null);
+    }
+  }, [openRouterApiKey]);
+
   return {
     pollinations: store.pollinations,
     huggingface: store.huggingface,
     google: store.google,
+    groq: store.groq,
+    openrouter: store.openrouter,
     isLoadingPollinations: store.isLoadingPollinations,
     isLoadingHuggingface: store.isLoadingHuggingface,
     refreshPollinations,

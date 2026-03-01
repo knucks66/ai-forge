@@ -23,6 +23,7 @@ export const defaultImageModels: ModelOption[] = [
   { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', provider: 'google', type: 'image', tags: ['google', 'fast'] },
   { id: 'gemini-3-pro-image-preview', name: 'Gemini 3 Pro Image', provider: 'google', type: 'image', tags: ['google', 'quality'] },
   { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', provider: 'google', type: 'image', tags: ['google', 'fast', 'new'] },
+  { id: 'google/gemini-2.5-flash-image-preview:free', name: 'Gemini Flash Image (OpenRouter)', provider: 'openrouter', type: 'image', tags: ['google', 'free'] },
 ];
 
 export const defaultTextModels: ModelOption[] = [
@@ -39,6 +40,13 @@ export const defaultTextModels: ModelOption[] = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', type: 'text', tags: ['google', 'fast'] },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', type: 'text', tags: ['google', 'reasoning'] },
   { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'google', type: 'text', tags: ['google'] },
+  { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', provider: 'groq', type: 'text', tags: ['meta', 'fast'] },
+  { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant (Groq)', provider: 'groq', type: 'text', tags: ['meta', 'fast'] },
+  { id: 'qwen/qwen3-32b', name: 'Qwen3 32B (Groq)', provider: 'groq', type: 'text', tags: ['alibaba', 'fast'] },
+  { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B (OpenRouter)', provider: 'openrouter', type: 'text', tags: ['meta', 'free'] },
+  { id: 'qwen/qwen3-235b-a22b-thinking-2507:free', name: 'Qwen3 235B Thinking', provider: 'openrouter', type: 'text', tags: ['alibaba', 'reasoning', 'free'] },
+  { id: 'mistralai/mistral-small-3.1-24b-instruct:free', name: 'Mistral Small 3.1', provider: 'openrouter', type: 'text', tags: ['mistral', 'free'] },
+  { id: 'google/gemma-3-27b-it:free', name: 'Gemma 3 27B', provider: 'openrouter', type: 'text', tags: ['google', 'free'] },
 ];
 
 export const defaultAudioModels: ModelOption[] = [

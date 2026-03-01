@@ -141,7 +141,7 @@ describe('SettingsDialog', () => {
   it('renders Test buttons for API connections', () => {
     render(<SettingsDialog onClose={onClose} />);
     const testButtons = screen.getAllByText('Test');
-    expect(testButtons).toHaveLength(3); // HF + Pollinations + Google
+    expect(testButtons).toHaveLength(5); // HF + Pollinations + Google + Groq + OpenRouter
   });
 
   it('Test buttons are disabled when tokens are empty', () => {

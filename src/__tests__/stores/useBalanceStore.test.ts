@@ -8,6 +8,8 @@ beforeEach(() => {
     pollinations: null,
     huggingface: null,
     google: null,
+    groq: null,
+    openrouter: null,
     isLoadingPollinations: false,
     isLoadingHuggingface: false,
   });
@@ -19,6 +21,8 @@ describe('useBalanceStore', () => {
       expect(getState().pollinations).toBeNull();
       expect(getState().huggingface).toBeNull();
       expect(getState().google).toBeNull();
+      expect(getState().groq).toBeNull();
+      expect(getState().openrouter).toBeNull();
       expect(getState().isLoadingPollinations).toBe(false);
       expect(getState().isLoadingHuggingface).toBe(false);
     });
@@ -68,6 +72,32 @@ describe('useBalanceStore', () => {
     });
   });
 
+  describe('setGroqAccount', () => {
+    it('sets groq account data', () => {
+      getState().setGroqAccount({ tier: 'free' });
+      expect(getState().groq).toEqual({ tier: 'free' });
+    });
+
+    it('clears groq account when set to null', () => {
+      getState().setGroqAccount({ tier: 'free' });
+      getState().setGroqAccount(null);
+      expect(getState().groq).toBeNull();
+    });
+  });
+
+  describe('setOpenRouterAccount', () => {
+    it('sets openrouter account data', () => {
+      getState().setOpenRouterAccount({ tier: 'free' });
+      expect(getState().openrouter).toEqual({ tier: 'free' });
+    });
+
+    it('clears openrouter account when set to null', () => {
+      getState().setOpenRouterAccount({ tier: 'free' });
+      getState().setOpenRouterAccount(null);
+      expect(getState().openrouter).toBeNull();
+    });
+  });
+
   describe('loading states', () => {
     it('sets pollinations loading state', () => {
       getState().setIsLoadingPollinations(true);
@@ -89,10 +119,14 @@ describe('useBalanceStore', () => {
       getState().setPollinationsAccount({ balance: 5.42, tier: 'seed' });
       getState().setHuggingfaceAccount({ username: 'testuser', plan: 'pro' });
       getState().setGoogleAccount({ tier: 'free' });
+      getState().setGroqAccount({ tier: 'free' });
+      getState().setOpenRouterAccount({ tier: 'free' });
       getState().clearAll();
       expect(getState().pollinations).toBeNull();
       expect(getState().huggingface).toBeNull();
       expect(getState().google).toBeNull();
+      expect(getState().groq).toBeNull();
+      expect(getState().openrouter).toBeNull();
     });
 
     it('does not affect loading states', () => {

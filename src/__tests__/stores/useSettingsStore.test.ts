@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 const { getState, setState } = useSettingsStore;
 
 beforeEach(() => {
-  setState({ hfToken: '', pollinationsKey: '', googleApiKey: '', nsfwEnabled: false });
+  setState({ hfToken: '', pollinationsKey: '', googleApiKey: '', groqApiKey: '', openRouterApiKey: '', nsfwEnabled: false });
 });
 
 describe('useSettingsStore', () => {
@@ -55,6 +55,32 @@ describe('useSettingsStore', () => {
       getState().setGoogleApiKey('AIzaSy...');
       getState().setGoogleApiKey('');
       expect(getState().googleApiKey).toBe('');
+    });
+  });
+
+  describe('setGroqApiKey', () => {
+    it('sets the Groq API key', () => {
+      getState().setGroqApiKey('gsk_abc123');
+      expect(getState().groqApiKey).toBe('gsk_abc123');
+    });
+
+    it('can clear the key', () => {
+      getState().setGroqApiKey('gsk_abc123');
+      getState().setGroqApiKey('');
+      expect(getState().groqApiKey).toBe('');
+    });
+  });
+
+  describe('setOpenRouterApiKey', () => {
+    it('sets the OpenRouter API key', () => {
+      getState().setOpenRouterApiKey('sk-or-abc123');
+      expect(getState().openRouterApiKey).toBe('sk-or-abc123');
+    });
+
+    it('can clear the key', () => {
+      getState().setOpenRouterApiKey('sk-or-abc123');
+      getState().setOpenRouterApiKey('');
+      expect(getState().openRouterApiKey).toBe('');
     });
   });
 

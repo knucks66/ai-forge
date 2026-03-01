@@ -14,21 +14,29 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const { hfToken, pollinationsKey, googleApiKey, setHfToken, setPollinationsKey, setGoogleApiKey } = useSettingsStore();
+  const { hfToken, pollinationsKey, googleApiKey, groqApiKey, openRouterApiKey, setHfToken, setPollinationsKey, setGoogleApiKey, setGroqApiKey, setOpenRouterApiKey } = useSettingsStore();
   const { theme, setTheme } = useAppStore();
   const [showHfToken, setShowHfToken] = useState(false);
   const [showPollKey, setShowPollKey] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [showGroqKey, setShowGroqKey] = useState(false);
+  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
   const [testingHf, setTestingHf] = useState(false);
   const [testingPoll, setTestingPoll] = useState(false);
   const [testingGoogle, setTestingGoogle] = useState(false);
+  const [testingGroq, setTestingGroq] = useState(false);
+  const [testingOpenRouter, setTestingOpenRouter] = useState(false);
   const [hfStatus, setHfStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [pollStatus, setPollStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [googleStatus, setGoogleStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [groqStatus, setGroqStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [openRouterStatus, setOpenRouterStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const {
     pollinations: pollAccount,
     huggingface: hfAccount,
     google: googleAccount,
+    groq: groqAccount,
+    openrouter: openRouterAccount,
     isLoadingPollinations,
     isLoadingHuggingface,
     refreshAll,
@@ -279,6 +287,160 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                 </a>
               </p>
             </div>
+
+            {/* Groq API Key */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted">Groq API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showGroqKey ? 'text' : 'password'}
+                    value={groqApiKey}
+                    onChange={(e) => { setGroqApiKey(e.target.value); setGroqStatus('idle'); }}
+                    placeholder="gsk_..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-accent pr-10"
+                  />
+                  <button
+                    onClick={() => setShowGroqKey(!showGroqKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                  >
+                    {showGroqKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!groqApiKey) {
+                      toast.error('Please enter a Groq API key first');
+                      return;
+                    }
+                    setTestingGroq(true);
+                    setGroqStatus('idle');
+                    try {
+                      const res = await fetch('/api/groq/text', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'x-groq-api-key': groqApiKey,
+                        },
+                        body: JSON.stringify({
+                          messages: [{ role: 'user', content: 'Hi' }],
+                          model: 'llama-3.3-70b-versatile',
+                          maxTokens: 16,
+                        }),
+                      });
+                      if (res.ok || res.status === 429) {
+                        setGroqStatus('success');
+                        toast.success(res.status === 429
+                          ? 'Groq key is valid! (Currently rate limited)'
+                          : 'Groq connection successful!');
+                      } else {
+                        setGroqStatus('error');
+                        const data = await res.json().catch(() => null);
+                        toast.error(data?.error || 'Groq connection failed');
+                      }
+                    } catch {
+                      setGroqStatus('error');
+                      toast.error('Connection test failed');
+                    } finally {
+                      setTestingGroq(false);
+                    }
+                  }}
+                  disabled={testingGroq || !groqApiKey}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                    'bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50'
+                  )}
+                >
+                  {testingGroq ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    groqStatus === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                    groqStatus === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> : null}
+                  Test
+                </button>
+              </div>
+              <p className="text-xs text-muted">
+                Required for Groq models. Get yours at{' '}
+                <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  console.groq.com/keys
+                </a>
+              </p>
+            </div>
+
+            {/* OpenRouter API Key */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted">OpenRouter API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showOpenRouterKey ? 'text' : 'password'}
+                    value={openRouterApiKey}
+                    onChange={(e) => { setOpenRouterApiKey(e.target.value); setOpenRouterStatus('idle'); }}
+                    placeholder="sk-or-..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-accent pr-10"
+                  />
+                  <button
+                    onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                  >
+                    {showOpenRouterKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!openRouterApiKey) {
+                      toast.error('Please enter an OpenRouter API key first');
+                      return;
+                    }
+                    setTestingOpenRouter(true);
+                    setOpenRouterStatus('idle');
+                    try {
+                      const res = await fetch('/api/openrouter/text', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'x-openrouter-api-key': openRouterApiKey,
+                        },
+                        body: JSON.stringify({
+                          messages: [{ role: 'user', content: 'Hi' }],
+                          model: 'meta-llama/llama-3.3-70b-instruct:free',
+                          maxTokens: 16,
+                        }),
+                      });
+                      if (res.ok || res.status === 429) {
+                        setOpenRouterStatus('success');
+                        toast.success(res.status === 429
+                          ? 'OpenRouter key is valid! (Currently rate limited)'
+                          : 'OpenRouter connection successful!');
+                      } else {
+                        setOpenRouterStatus('error');
+                        const data = await res.json().catch(() => null);
+                        toast.error(data?.error || 'OpenRouter connection failed');
+                      }
+                    } catch {
+                      setOpenRouterStatus('error');
+                      toast.error('Connection test failed');
+                    } finally {
+                      setTestingOpenRouter(false);
+                    }
+                  }}
+                  disabled={testingOpenRouter || !openRouterApiKey}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                    'bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50'
+                  )}
+                >
+                  {testingOpenRouter ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    openRouterStatus === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                    openRouterStatus === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> : null}
+                  Test
+                </button>
+              </div>
+              <p className="text-xs text-muted">
+                Required for OpenRouter models. Get yours at{' '}
+                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  openrouter.ai/keys
+                </a>
+              </p>
+            </div>
           </section>
 
           {/* Account Status Section */}
@@ -338,6 +500,30 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                     ? <span className="text-muted text-xs">No API key set</span>
                     : googleAccount
                     ? <span className="text-green-400 text-xs">Free tier (rate limited)</span>
+                    : <span className="text-muted text-xs">Key set</span>
+                  }
+                </span>
+              </div>
+              {/* Groq row */}
+              <div className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border border-border">
+                <span className="text-muted">Groq</span>
+                <span className="text-foreground">
+                  {!groqApiKey
+                    ? <span className="text-muted text-xs">No API key set</span>
+                    : groqAccount
+                    ? <span className="text-orange-400 text-xs">Free tier (rate limited)</span>
+                    : <span className="text-muted text-xs">Key set</span>
+                  }
+                </span>
+              </div>
+              {/* OpenRouter row */}
+              <div className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border border-border">
+                <span className="text-muted">OpenRouter</span>
+                <span className="text-foreground">
+                  {!openRouterApiKey
+                    ? <span className="text-muted text-xs">No API key set</span>
+                    : openRouterAccount
+                    ? <span className="text-purple-400 text-xs">Free tier (rate limited)</span>
                     : <span className="text-muted text-xs">Key set</span>
                   }
                 </span>

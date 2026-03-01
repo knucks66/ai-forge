@@ -17,7 +17,7 @@ describe.each(allModels)('$name', ({ models, expectedType }) => {
     for (const model of models) {
       expect(model.id).toBeTruthy();
       expect(model.name).toBeTruthy();
-      expect(['pollinations', 'huggingface', 'google']).toContain(model.provider);
+      expect(['pollinations', 'huggingface', 'google', 'groq', 'openrouter']).toContain(model.provider);
       expect(model.type).toBe(expectedType);
     }
   });

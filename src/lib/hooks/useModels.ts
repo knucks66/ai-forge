@@ -102,6 +102,8 @@ export function useModels() {
       }
       // Google models — static defaults, no API fetch needed
       imageModels.push(...defaultImageModels.filter((m) => m.provider === 'google'));
+      // OpenRouter image models — static defaults
+      imageModels.push(...defaultImageModels.filter((m) => m.provider === 'openrouter'));
       store.setImageModels(imageModels);
 
       // Process text models
@@ -137,6 +139,10 @@ export function useModels() {
       }
       // Google models — static defaults, no API fetch needed
       textModels.push(...defaultTextModels.filter((m) => m.provider === 'google'));
+      // Groq models — static defaults
+      textModels.push(...defaultTextModels.filter((m) => m.provider === 'groq'));
+      // OpenRouter text models — static defaults
+      textModels.push(...defaultTextModels.filter((m) => m.provider === 'openrouter'));
       store.setTextModels(textModels);
 
       // Process audio models
@@ -214,18 +220,31 @@ export function useModels() {
     }
   }, [hfToken]); // Re-fetch when HF token changes
 
-  // Always ensure Google defaults are present (static models, no API fetch needed).
-  // This handles the case where cached model lists predate the Google provider.
+  // Always ensure static-default providers are present.
+  // This handles the case where cached model lists predate newer providers.
   const imageModels = useMemo(() => {
-    const hasGoogle = store.imageModels.some((m) => m.provider === 'google');
-    if (hasGoogle) return store.imageModels;
-    return [...store.imageModels, ...defaultImageModels.filter((m) => m.provider === 'google')];
+    let models = store.imageModels;
+    if (!models.some((m) => m.provider === 'google')) {
+      models = [...models, ...defaultImageModels.filter((m) => m.provider === 'google')];
+    }
+    if (!models.some((m) => m.provider === 'openrouter')) {
+      models = [...models, ...defaultImageModels.filter((m) => m.provider === 'openrouter')];
+    }
+    return models;
   }, [store.imageModels]);
 
   const textModels = useMemo(() => {
-    const hasGoogle = store.textModels.some((m) => m.provider === 'google');
-    if (hasGoogle) return store.textModels;
-    return [...store.textModels, ...defaultTextModels.filter((m) => m.provider === 'google')];
+    let models = store.textModels;
+    if (!models.some((m) => m.provider === 'google')) {
+      models = [...models, ...defaultTextModels.filter((m) => m.provider === 'google')];
+    }
+    if (!models.some((m) => m.provider === 'groq')) {
+      models = [...models, ...defaultTextModels.filter((m) => m.provider === 'groq')];
+    }
+    if (!models.some((m) => m.provider === 'openrouter')) {
+      models = [...models, ...defaultTextModels.filter((m) => m.provider === 'openrouter')];
+    }
+    return models;
   }, [store.textModels]);
 
   return {
