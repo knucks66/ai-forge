@@ -100,6 +100,8 @@ export function useModels() {
       } else {
         imageModels.push(...defaultImageModels.filter((m) => m.provider === 'huggingface'));
       }
+      // Google models — static defaults, no API fetch needed
+      imageModels.push(...defaultImageModels.filter((m) => m.provider === 'google'));
       store.setImageModels(imageModels);
 
       // Process text models
@@ -133,6 +135,8 @@ export function useModels() {
       } else {
         textModels.push(...defaultTextModels.filter((m) => m.provider === 'huggingface'));
       }
+      // Google models — static defaults, no API fetch needed
+      textModels.push(...defaultTextModels.filter((m) => m.provider === 'google'));
       store.setTextModels(textModels);
 
       // Process audio models

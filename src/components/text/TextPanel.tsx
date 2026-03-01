@@ -10,6 +10,7 @@ import { SystemPromptInput } from './SystemPromptInput';
 import { generatePollinationsText, fetchPollinationsBalance } from '@/lib/api/pollinations';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfText } from '@/lib/api/huggingface';
+import { generateGoogleText } from '@/lib/api/google';
 import { v4 as uuid } from 'uuid';
 import { Trash2, ChevronDown, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
@@ -18,7 +19,7 @@ import { useState } from 'react';
 
 export function TextPanel() {
   const store = useTextStore();
-  const { hfToken, pollinationsKey } = useSettingsStore();
+  const { hfToken, pollinationsKey, googleApiKey } = useSettingsStore();
   const [showControls, setShowControls] = useState(false);
 
   const handleSend = async (content: string) => {
@@ -26,6 +27,11 @@ export function TextPanel() {
 
     if (store.provider === 'huggingface' && !hfToken) {
       toast.error('HuggingFace token required. Add it in Settings.');
+      return;
+    }
+
+    if (store.provider === 'google' && !googleApiKey) {
+      toast.error('Google API key required. Add it in Settings.');
       return;
     }
 
@@ -65,6 +71,13 @@ export function TextPanel() {
           maxTokens: store.maxTokens,
           topP: store.topP,
           stream: true,
+        });
+      } else if (store.provider === 'google') {
+        response = await generateGoogleText(messages, googleApiKey, {
+          model: store.model,
+          temperature: store.temperature,
+          maxTokens: store.maxTokens,
+          topP: store.topP,
         });
       } else {
         response = await generateHfText(messages, hfToken, {

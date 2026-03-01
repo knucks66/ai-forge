@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { ChatMessage } from '@/types/chat';
+import { Provider } from '@/types/generation';
 
 interface TextState {
   messages: ChatMessage[];
   systemPrompt: string;
   model: string;
-  provider: 'pollinations' | 'huggingface';
+  provider: Provider;
   temperature: number;
   maxTokens: number;
   topP: number;
@@ -19,7 +20,7 @@ interface TextState {
   clearMessages: () => void;
   setSystemPrompt: (prompt: string) => void;
   setModel: (model: string) => void;
-  setProvider: (provider: 'pollinations' | 'huggingface') => void;
+  setProvider: (provider: Provider) => void;
   setTemperature: (temp: number) => void;
   setMaxTokens: (tokens: number) => void;
   setTopP: (topP: number) => void;

@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 const { getState, setState } = useSettingsStore;
 
 beforeEach(() => {
-  setState({ hfToken: '', pollinationsKey: '', nsfwEnabled: false });
+  setState({ hfToken: '', pollinationsKey: '', googleApiKey: '', nsfwEnabled: false });
 });
 
 describe('useSettingsStore', () => {
@@ -42,6 +42,19 @@ describe('useSettingsStore', () => {
       getState().setPollinationsKey('pk_xyz789');
       getState().setPollinationsKey('');
       expect(getState().pollinationsKey).toBe('');
+    });
+  });
+
+  describe('setGoogleApiKey', () => {
+    it('sets the Google API key', () => {
+      getState().setGoogleApiKey('AIzaSy...');
+      expect(getState().googleApiKey).toBe('AIzaSy...');
+    });
+
+    it('can clear the key', () => {
+      getState().setGoogleApiKey('AIzaSy...');
+      getState().setGoogleApiKey('');
+      expect(getState().googleApiKey).toBe('');
     });
   });
 

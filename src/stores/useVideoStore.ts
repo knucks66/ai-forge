@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { VideoGenerationMode } from '@/types/generation';
+import { VideoGenerationMode, Provider } from '@/types/generation';
 
 interface VideoState {
   prompt: string;
   model: string;
-  provider: 'huggingface' | 'pollinations';
+  provider: Provider;
   mode: VideoGenerationMode;
   inputImageUrl: string | null;
   inputImageBlob: Blob | null;
@@ -20,7 +20,7 @@ interface VideoState {
 
   setPrompt: (prompt: string) => void;
   setModel: (model: string) => void;
-  setProvider: (provider: 'huggingface' | 'pollinations') => void;
+  setProvider: (provider: Provider) => void;
   setMode: (mode: VideoGenerationMode) => void;
   setInputImage: (url: string | null, blob: Blob | null) => void;
   clearInputImage: () => void;

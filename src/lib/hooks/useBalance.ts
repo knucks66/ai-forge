@@ -9,6 +9,7 @@ import { fetchHfAccountInfo } from '@/lib/api/huggingface';
 export function useBalance() {
   const pollinationsKey = useSettingsStore((s) => s.pollinationsKey);
   const hfToken = useSettingsStore((s) => s.hfToken);
+  const googleApiKey = useSettingsStore((s) => s.googleApiKey);
   const store = useBalanceStore();
 
   const refreshPollinations = useCallback(async () => {
@@ -69,9 +70,19 @@ export function useBalance() {
     }
   }, [hfToken]);
 
+  // Google has no balance API — just set static tier info when key is present
+  useEffect(() => {
+    if (googleApiKey) {
+      store.setGoogleAccount({ tier: 'free' });
+    } else {
+      store.setGoogleAccount(null);
+    }
+  }, [googleApiKey]);
+
   return {
     pollinations: store.pollinations,
     huggingface: store.huggingface,
+    google: store.google,
     isLoadingPollinations: store.isLoadingPollinations,
     isLoadingHuggingface: store.isLoadingHuggingface,
     refreshPollinations,

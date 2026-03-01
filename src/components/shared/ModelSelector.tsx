@@ -47,6 +47,7 @@ export function ModelSelector({
 
   const pollinationsModels = models.filter((m) => m.provider === 'pollinations');
   const hfModels = models.filter((m) => m.provider === 'huggingface');
+  const googleModels = models.filter((m) => m.provider === 'google');
 
   const selectedModelObj = models.find(
     (m) => m.id === selectedModel && m.provider === selectedProvider
@@ -134,9 +135,11 @@ export function ModelSelector({
           'text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0',
           selectedProvider === 'pollinations'
             ? 'bg-blue-500/15 text-blue-400'
+            : selectedProvider === 'google'
+            ? 'bg-green-500/15 text-green-400'
             : 'bg-yellow-500/15 text-yellow-400'
         )}>
-          {selectedProvider === 'pollinations' ? 'Poll' : 'HF'}
+          {selectedProvider === 'pollinations' ? 'Poll' : selectedProvider === 'google' ? 'Google' : 'HF'}
         </span>
         <ChevronDown className={cn(
           'w-4 h-4 text-muted shrink-0 transition-transform',
@@ -226,6 +229,36 @@ export function ModelSelector({
                       badge.className
                     )}>
                       {badge.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Google AI group */}
+          {googleModels.length > 0 && (
+            <div>
+              <div className="sticky top-0 px-3 py-1.5 bg-surface border-b border-border flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Google AI</span>
+                <span className="text-[10px] font-medium text-green-400">Free tier</span>
+              </div>
+              {googleModels.map((m) => {
+                const isSelected = m.id === selectedModel && m.provider === selectedProvider;
+                return (
+                  <button
+                    key={`g-${m.id}`}
+                    onClick={() => handleSelect(m)}
+                    className={cn(
+                      'w-full px-3 py-1.5 text-sm text-left flex items-center gap-2 transition-colors',
+                      isSelected
+                        ? 'bg-accent/15 text-accent'
+                        : 'hover:bg-surface-hover text-foreground'
+                    )}
+                  >
+                    <span className="flex-1 truncate">{m.name}</span>
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-emerald-500/15 text-emerald-400">
+                      FREE
                     </span>
                   </button>
                 );

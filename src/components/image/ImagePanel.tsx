@@ -15,6 +15,7 @@ import { canvasSizes } from '@/data/canvas-sizes';
 import { generatePollinationsImage, fetchPollinationsBalance } from '@/lib/api/pollinations';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfImage, generateHfImageToImage } from '@/lib/api/huggingface';
+import { generateGoogleImage } from '@/lib/api/google';
 import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem, generateThumbnail } from '@/lib/db';
 import { randomSeed } from '@/lib/utils/seed';
@@ -29,7 +30,7 @@ import { detectNsfwPrompt, isNsfwPreset } from '@/lib/utils/nsfw-detect';
 
 export function ImagePanel() {
   const store = useImageStore();
-  const { hfToken, pollinationsKey, nsfwEnabled, setNsfwEnabled } = useSettingsStore();
+  const { hfToken, pollinationsKey, googleApiKey, nsfwEnabled, setNsfwEnabled } = useSettingsStore();
   const [fullscreen, setFullscreen] = useState(false);
 
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
@@ -60,6 +61,11 @@ export function ImagePanel() {
 
     if (store.provider === 'huggingface' && !hfToken) {
       toast.error('HuggingFace token required. Add it in Settings.');
+      return;
+    }
+
+    if (store.provider === 'google' && !googleApiKey) {
+      toast.error('Google API key required. Add it in Settings.');
       return;
     }
 
@@ -115,6 +121,10 @@ export function ImagePanel() {
             width: store.width,
             height: store.height,
             seed,
+          });
+        } else if (store.provider === 'google') {
+          result = await generateGoogleImage(fullPrompt, googleApiKey, {
+            model: store.model,
           });
         } else {
           result = await generateHfImage(fullPrompt, hfToken, {

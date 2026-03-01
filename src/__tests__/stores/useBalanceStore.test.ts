@@ -7,6 +7,7 @@ beforeEach(() => {
   setState({
     pollinations: null,
     huggingface: null,
+    google: null,
     isLoadingPollinations: false,
     isLoadingHuggingface: false,
   });
@@ -17,6 +18,7 @@ describe('useBalanceStore', () => {
     it('has correct initial state', () => {
       expect(getState().pollinations).toBeNull();
       expect(getState().huggingface).toBeNull();
+      expect(getState().google).toBeNull();
       expect(getState().isLoadingPollinations).toBe(false);
       expect(getState().isLoadingHuggingface).toBe(false);
     });
@@ -53,6 +55,19 @@ describe('useBalanceStore', () => {
     });
   });
 
+  describe('setGoogleAccount', () => {
+    it('sets google account data', () => {
+      getState().setGoogleAccount({ tier: 'free' });
+      expect(getState().google).toEqual({ tier: 'free' });
+    });
+
+    it('clears google account when set to null', () => {
+      getState().setGoogleAccount({ tier: 'free' });
+      getState().setGoogleAccount(null);
+      expect(getState().google).toBeNull();
+    });
+  });
+
   describe('loading states', () => {
     it('sets pollinations loading state', () => {
       getState().setIsLoadingPollinations(true);
@@ -73,9 +88,11 @@ describe('useBalanceStore', () => {
     it('clears all account data', () => {
       getState().setPollinationsAccount({ balance: 5.42, tier: 'seed' });
       getState().setHuggingfaceAccount({ username: 'testuser', plan: 'pro' });
+      getState().setGoogleAccount({ tier: 'free' });
       getState().clearAll();
       expect(getState().pollinations).toBeNull();
       expect(getState().huggingface).toBeNull();
+      expect(getState().google).toBeNull();
     });
 
     it('does not affect loading states', () => {

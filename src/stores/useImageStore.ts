@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ImageGenerationMode } from '@/types/generation';
+import { ImageGenerationMode, Provider } from '@/types/generation';
 
 interface ImageState {
   prompt: string;
   negativePrompt: string;
   model: string;
-  provider: 'pollinations' | 'huggingface';
+  provider: Provider;
   stylePreset: string;
   canvasSize: string;
   width: number;
@@ -31,7 +31,7 @@ interface ImageState {
   setPrompt: (prompt: string) => void;
   setNegativePrompt: (prompt: string) => void;
   setModel: (model: string) => void;
-  setProvider: (provider: 'pollinations' | 'huggingface') => void;
+  setProvider: (provider: Provider) => void;
   setStylePreset: (preset: string) => void;
   setCanvasSize: (size: string) => void;
   setWidth: (width: number) => void;

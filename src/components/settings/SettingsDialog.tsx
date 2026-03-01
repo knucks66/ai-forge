@@ -14,17 +14,21 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ onClose }: SettingsDialogProps) {
-  const { hfToken, pollinationsKey, setHfToken, setPollinationsKey } = useSettingsStore();
+  const { hfToken, pollinationsKey, googleApiKey, setHfToken, setPollinationsKey, setGoogleApiKey } = useSettingsStore();
   const { theme, setTheme } = useAppStore();
   const [showHfToken, setShowHfToken] = useState(false);
   const [showPollKey, setShowPollKey] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [testingHf, setTestingHf] = useState(false);
   const [testingPoll, setTestingPoll] = useState(false);
+  const [testingGoogle, setTestingGoogle] = useState(false);
   const [hfStatus, setHfStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [pollStatus, setPollStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [googleStatus, setGoogleStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const {
     pollinations: pollAccount,
     huggingface: hfAccount,
+    google: googleAccount,
     isLoadingPollinations,
     isLoadingHuggingface,
     refreshAll,
@@ -179,6 +183,80 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                 </a>
               </p>
             </div>
+
+            {/* Google API Key */}
+            <div className="space-y-2">
+              <label className="text-sm text-muted">Google AI Studio API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showGoogleKey ? 'text' : 'password'}
+                    value={googleApiKey}
+                    onChange={(e) => { setGoogleApiKey(e.target.value); setGoogleStatus('idle'); }}
+                    placeholder="AIza..."
+                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:border-accent pr-10"
+                  />
+                  <button
+                    onClick={() => setShowGoogleKey(!showGoogleKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                  >
+                    {showGoogleKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!googleApiKey) {
+                      toast.error('Please enter a Google API key first');
+                      return;
+                    }
+                    setTestingGoogle(true);
+                    setGoogleStatus('idle');
+                    try {
+                      const res = await fetch('/api/google/text', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'x-google-api-key': googleApiKey,
+                        },
+                        body: JSON.stringify({
+                          messages: [{ role: 'user', content: 'Hi' }],
+                          model: 'gemini-2.0-flash',
+                          maxTokens: 16,
+                        }),
+                      });
+                      if (res.ok) {
+                        setGoogleStatus('success');
+                        toast.success('Google AI connection successful!');
+                      } else {
+                        setGoogleStatus('error');
+                        toast.error('Invalid Google API key');
+                      }
+                    } catch {
+                      setGoogleStatus('error');
+                      toast.error('Connection test failed');
+                    } finally {
+                      setTestingGoogle(false);
+                    }
+                  }}
+                  disabled={testingGoogle || !googleApiKey}
+                  className={cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1',
+                    'bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50'
+                  )}
+                >
+                  {testingGoogle ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                    googleStatus === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+                    googleStatus === 'error' ? <XCircle className="w-4 h-4 text-red-500" /> : null}
+                  Test
+                </button>
+              </div>
+              <p className="text-xs text-muted">
+                Required for Google AI models. Get yours at{' '}
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  aistudio.google.com/apikey
+                </a>
+              </p>
+            </div>
           </section>
 
           {/* Account Status Section */}
@@ -227,6 +305,18 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                     : hfAccount
                     ? <>{hfAccount.username} · {hfAccount.plan}</>
                     : <span className="text-red-400 text-xs">Unable to fetch</span>
+                  }
+                </span>
+              </div>
+              {/* Google row */}
+              <div className="flex items-center justify-between px-3 py-2 bg-background rounded-lg border border-border">
+                <span className="text-muted">Google AI</span>
+                <span className="text-foreground">
+                  {!googleApiKey
+                    ? <span className="text-muted text-xs">No API key set</span>
+                    : googleAccount
+                    ? <span className="text-green-400 text-xs">Free tier (rate limited)</span>
+                    : <span className="text-muted text-xs">Key set</span>
                   }
                 </span>
               </div>

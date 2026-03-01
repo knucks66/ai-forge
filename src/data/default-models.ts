@@ -20,6 +20,7 @@ export const defaultImageModels: ModelOption[] = [
   { id: 'stabilityai/stable-diffusion-3-medium-diffusers', name: 'SD 3 Medium', provider: 'huggingface', type: 'image', tags: ['stable-diffusion'] },
   { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', provider: 'huggingface', type: 'image', tags: ['flux'] },
   { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', provider: 'huggingface', type: 'image', tags: ['flux', 'fast'] },
+  { id: 'gemini-2.0-flash-preview-image-generation', name: 'Gemini Flash (Image Gen)', provider: 'google', type: 'image', tags: ['google', 'free'] },
 ];
 
 export const defaultTextModels: ModelOption[] = [
@@ -33,6 +34,9 @@ export const defaultTextModels: ModelOption[] = [
   { id: 'gemini', name: 'Gemini 2.0 Flash', provider: 'pollinations', type: 'text', tags: ['google'] },
   { id: 'mistralai/Mistral-7B-Instruct-v0.3', name: 'Mistral 7B', provider: 'huggingface', type: 'text', tags: ['open-source'] },
   { id: 'meta-llama/Meta-Llama-3.1-8B-Instruct', name: 'Llama 3.1 8B', provider: 'huggingface', type: 'text', tags: ['meta'] },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'google', type: 'text', tags: ['google', 'fast'] },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', type: 'text', tags: ['google', 'reasoning'] },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'google', type: 'text', tags: ['google'] },
 ];
 
 export const defaultAudioModels: ModelOption[] = [
