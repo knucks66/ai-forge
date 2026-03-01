@@ -220,33 +220,38 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                         },
                         body: JSON.stringify({
                           messages: [{ role: 'user', content: 'Hi' }],
-                          model: 'gemini-2.0-flash',
+                          model: 'gemini-2.5-flash',
                           maxTokens: 16,
                         }),
                       });
-                      if (!res.ok) {
-                        setGoogleStatus('error');
-                        toast.error('Invalid Google API key');
-                        return;
-                      }
-                      // For SSE streams, errors may be inside the stream data
-                      // Read just enough to check for an error
-                      const reader = res.body?.getReader();
-                      if (!reader) {
-                        setGoogleStatus('error');
-                        toast.error('No response from Google AI');
-                        return;
-                      }
-                      const decoder = new TextDecoder();
-                      const { value } = await reader.read();
-                      reader.cancel();
-                      const text = value ? decoder.decode(value) : '';
-                      if (text.includes('"error"')) {
-                        setGoogleStatus('error');
-                        toast.error('Invalid Google API key');
-                      } else {
+                      if (res.ok) {
+                        // SSE stream started — read first chunk to verify no error inside
+                        const reader = res.body?.getReader();
+                        if (reader) {
+                          const { value } = await reader.read();
+                          reader.cancel();
+                          const text = value ? new TextDecoder().decode(value) : '';
+                          if (text.includes('"error"')) {
+                            setGoogleStatus('error');
+                            toast.error('Google AI returned an error. Check your API key.');
+                            return;
+                          }
+                        }
                         setGoogleStatus('success');
                         toast.success('Google AI connection successful!');
+                      } else if (res.status === 429) {
+                        // Rate limited — key is valid but quota exceeded
+                        setGoogleStatus('success');
+                        toast.success('Google AI key is valid! (Currently rate limited — wait a moment before generating)');
+                      } else {
+                        setGoogleStatus('error');
+                        const data = await res.json().catch(() => null);
+                        const msg = data?.error;
+                        if (msg?.includes('API key not valid')) {
+                          toast.error('Invalid Google API key');
+                        } else {
+                          toast.error(msg || 'Google AI connection failed');
+                        }
                       }
                     } catch {
                       setGoogleStatus('error');

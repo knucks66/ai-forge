@@ -73,8 +73,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Text generation failed';
+    // Preserve status code from Google API errors (e.g. 429 rate limit vs 400 invalid key)
+    const status = (error as { status?: number })?.status || 500;
     return new Response(JSON.stringify({ error: message }), {
-      status: 500,
+      status,
       headers: { 'Content-Type': 'application/json' },
     });
   }
