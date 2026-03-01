@@ -20,7 +20,9 @@ export const defaultImageModels: ModelOption[] = [
   { id: 'stabilityai/stable-diffusion-3-medium-diffusers', name: 'SD 3 Medium', provider: 'huggingface', type: 'image', tags: ['stable-diffusion'] },
   { id: 'black-forest-labs/FLUX.1-dev', name: 'FLUX.1 Dev', provider: 'huggingface', type: 'image', tags: ['flux'] },
   { id: 'black-forest-labs/FLUX.1-schnell', name: 'FLUX.1 Schnell', provider: 'huggingface', type: 'image', tags: ['flux', 'fast'] },
-  { id: 'gemini-2.0-flash-preview-image-generation', name: 'Gemini Flash (Image Gen)', provider: 'google', type: 'image', tags: ['google', 'free'] },
+  { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image', provider: 'google', type: 'image', tags: ['google', 'fast'] },
+  { id: 'gemini-3-pro-image-preview', name: 'Gemini 3 Pro Image', provider: 'google', type: 'image', tags: ['google', 'quality'] },
+  { id: 'gemini-3.1-flash-image-preview', name: 'Gemini 3.1 Flash Image', provider: 'google', type: 'image', tags: ['google', 'fast', 'new'] },
 ];
 
 export const defaultTextModels: ModelOption[] = [
