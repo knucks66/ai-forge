@@ -37,6 +37,19 @@ vi.mock('next/server', () => {
   };
 });
 
+/** Helper to create a mock model with hf-inference provider mapping */
+function mockModel(modelId: string, overrides?: Record<string, unknown>) {
+  return {
+    modelId,
+    description: '',
+    tags: [],
+    inferenceProviderMapping: [
+      { provider: 'hf-inference', status: 'live', task: 'text-to-image' },
+    ],
+    ...overrides,
+  };
+}
+
 async function importRoute() {
   return await import('@/app/api/hf/models/route');
 }
@@ -48,7 +61,7 @@ describe('GET /api/hf/models', () => {
       http.get('https://huggingface.co/api/models', ({ request }) => {
         capturedUrl = request.url;
         return HttpResponse.json([
-          { modelId: 'org/test-model', description: 'A model', tags: ['test'] },
+          mockModel('org/test-model', { description: 'A model', tags: ['test'] }),
         ]);
       })
     );
@@ -68,12 +81,11 @@ describe('GET /api/hf/models', () => {
     server.use(
       http.get('https://huggingface.co/api/models', () => {
         return HttpResponse.json([
-          {
-            modelId: 'org/my-model',
+          mockModel('org/my-model', {
             id: 'org/my-model',
             description: 'Description text here',
             tags: ['diffusers', 'stable-diffusion'],
-          },
+          }),
         ]);
       })
     );
@@ -95,7 +107,7 @@ describe('GET /api/hf/models', () => {
     server.use(
       http.get('https://huggingface.co/api/models', () => {
         return HttpResponse.json([
-          { modelId: 'org/text-model', description: '', tags: [] },
+          mockModel('org/text-model'),
         ]);
       })
     );
@@ -113,7 +125,7 @@ describe('GET /api/hf/models', () => {
     server.use(
       http.get('https://huggingface.co/api/models', () => {
         return HttpResponse.json([
-          { modelId: 'org/video-model', description: '', tags: [] },
+          mockModel('org/video-model'),
         ]);
       })
     );
@@ -125,6 +137,40 @@ describe('GET /api/hf/models', () => {
     const res = await GET(req as any);
     const data = await res.json();
     expect(data[0].type).toBe('video');
+  });
+
+  it('filters out models without hf-inference provider', async () => {
+    server.use(
+      http.get('https://huggingface.co/api/models', () => {
+        return HttpResponse.json([
+          mockModel('org/free-model'),
+          {
+            modelId: 'org/paid-only-model',
+            description: '',
+            tags: [],
+            inferenceProviderMapping: [
+              { provider: 'fal-ai', status: 'live', task: 'text-to-image' },
+            ],
+          },
+          {
+            modelId: 'org/no-inference-model',
+            description: '',
+            tags: [],
+            inferenceProviderMapping: [],
+          },
+        ]);
+      })
+    );
+
+    const { GET } = await importRoute();
+    const { NextRequest } = await import('next/server');
+    const req = new NextRequest('http://localhost/api/hf/models?task=text-to-image');
+
+    const res = await GET(req as any);
+    const data = await res.json();
+
+    expect(data).toHaveLength(1);
+    expect(data[0].id).toBe('org/free-model');
   });
 
   it('returns 500 on HuggingFace API error', async () => {
