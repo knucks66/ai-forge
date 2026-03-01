@@ -224,12 +224,29 @@ export function SettingsDialog({ onClose }: SettingsDialogProps) {
                           maxTokens: 16,
                         }),
                       });
-                      if (res.ok) {
-                        setGoogleStatus('success');
-                        toast.success('Google AI connection successful!');
-                      } else {
+                      if (!res.ok) {
                         setGoogleStatus('error');
                         toast.error('Invalid Google API key');
+                        return;
+                      }
+                      // For SSE streams, errors may be inside the stream data
+                      // Read just enough to check for an error
+                      const reader = res.body?.getReader();
+                      if (!reader) {
+                        setGoogleStatus('error');
+                        toast.error('No response from Google AI');
+                        return;
+                      }
+                      const decoder = new TextDecoder();
+                      const { value } = await reader.read();
+                      reader.cancel();
+                      const text = value ? decoder.decode(value) : '';
+                      if (text.includes('"error"')) {
+                        setGoogleStatus('error');
+                        toast.error('Invalid Google API key');
+                      } else {
+                        setGoogleStatus('success');
+                        toast.success('Google AI connection successful!');
                       }
                     } catch {
                       setGoogleStatus('error');
