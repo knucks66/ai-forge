@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useModelsStore } from '@/stores/useModelsStore';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { useModels } from '@/lib/hooks/useModels';
 import { cn } from '@/lib/utils/cn';
@@ -28,17 +27,16 @@ export function ModelSelector({
   className,
   requiredCapability,
 }: ModelSelectorProps) {
-  const store = useModelsStore();
-  const { refresh, isLoading } = useModels();
+  const { imageModels: hookImageModels, textModels: hookTextModels, audioModels: hookAudioModels, videoModels: hookVideoModels, refresh, isLoading } = useModels();
   const balanceStore = useBalanceStore();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   let models: ModelOption[] =
-    type === 'image' ? store.imageModels :
-    type === 'text' ? store.textModels :
-    type === 'audio' ? store.audioModels :
-    store.videoModels;
+    type === 'image' ? hookImageModels :
+    type === 'text' ? hookTextModels :
+    type === 'audio' ? hookAudioModels :
+    hookVideoModels;
 
   // Filter by required capability if specified
   if (requiredCapability) {

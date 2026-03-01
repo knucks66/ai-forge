@@ -5,12 +5,18 @@ import { ModelSelector } from '@/components/shared/ModelSelector';
 import { useModelsStore } from '@/stores/useModelsStore';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 
-// Mock the useModels hook
+// Mock the useModels hook — we'll set mockModels in beforeEach
+const mockModelsReturn = {
+  imageModels: [] as any[],
+  textModels: [] as any[],
+  audioModels: [] as any[],
+  videoModels: [] as any[],
+  refresh: vi.fn(),
+  isLoading: false,
+};
+
 vi.mock('@/lib/hooks/useModels', () => ({
-  useModels: () => ({
-    refresh: vi.fn(),
-    isLoading: false,
-  }),
+  useModels: () => mockModelsReturn,
 }));
 
 // Mock react-hot-toast
@@ -18,27 +24,30 @@ vi.mock('react-hot-toast', () => ({
   default: vi.fn(),
 }));
 
+const testImageModels = [
+  { id: 'flux', name: 'FLUX.1', provider: 'pollinations', type: 'image', costsCredits: true },
+  { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image', costsCredits: true },
+  { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', capabilities: { supportsImageInput: true }, costsCredits: true },
+  { id: 'premium-model', name: 'Premium', provider: 'pollinations', type: 'image', paidOnly: true, costsCredits: true },
+  { id: 'free-model', name: 'Freebie', provider: 'pollinations', type: 'image' },
+  { id: 'stabilityai/sdxl', name: 'SDXL', provider: 'huggingface', type: 'image' },
+] as any[];
+
+const testTextModels = [
+  { id: 'openai', name: 'GPT-4o Mini', provider: 'pollinations', type: 'text' },
+] as any[];
+
+const testVideoModels = [
+  { id: 'wan', name: 'Wan', provider: 'pollinations', type: 'video', capabilities: { supportsVideoOutput: true, supportsImageToVideo: true } },
+  { id: 'ali-vilab/t2v', name: 'T2V 1.7B', provider: 'huggingface', type: 'video', capabilities: { supportsVideoOutput: true } },
+] as any[];
+
 beforeEach(() => {
-  useModelsStore.setState({
-    imageModels: [
-      { id: 'flux', name: 'FLUX.1', provider: 'pollinations', type: 'image', costsCredits: true },
-      { id: 'turbo', name: 'Turbo', provider: 'pollinations', type: 'image', costsCredits: true },
-      { id: 'kontext', name: 'Kontext', provider: 'pollinations', type: 'image', capabilities: { supportsImageInput: true }, costsCredits: true },
-      { id: 'premium-model', name: 'Premium', provider: 'pollinations', type: 'image', paidOnly: true, costsCredits: true },
-      { id: 'free-model', name: 'Freebie', provider: 'pollinations', type: 'image' },
-      { id: 'stabilityai/sdxl', name: 'SDXL', provider: 'huggingface', type: 'image' },
-    ],
-    textModels: [
-      { id: 'openai', name: 'GPT-4o Mini', provider: 'pollinations', type: 'text' },
-    ],
-    audioModels: [],
-    videoModels: [
-      { id: 'wan', name: 'Wan', provider: 'pollinations', type: 'video', capabilities: { supportsVideoOutput: true, supportsImageToVideo: true } },
-      { id: 'ali-vilab/t2v', name: 'T2V 1.7B', provider: 'huggingface', type: 'video', capabilities: { supportsVideoOutput: true } },
-    ],
-    lastFetched: {},
-    isLoading: false,
-  });
+  // Populate the mock hook return values
+  mockModelsReturn.imageModels = testImageModels;
+  mockModelsReturn.textModels = testTextModels;
+  mockModelsReturn.audioModels = [];
+  mockModelsReturn.videoModels = testVideoModels;
 
   useBalanceStore.setState({
     pollinations: null,
