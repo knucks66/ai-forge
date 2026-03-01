@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useModelsStore } from '@/stores/useModelsStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { fetchPollinationsModels } from '@/lib/api/pollinations';
@@ -214,9 +214,23 @@ export function useModels() {
     }
   }, [hfToken]); // Re-fetch when HF token changes
 
+  // Always ensure Google defaults are present (static models, no API fetch needed).
+  // This handles the case where cached model lists predate the Google provider.
+  const imageModels = useMemo(() => {
+    const hasGoogle = store.imageModels.some((m) => m.provider === 'google');
+    if (hasGoogle) return store.imageModels;
+    return [...store.imageModels, ...defaultImageModels.filter((m) => m.provider === 'google')];
+  }, [store.imageModels]);
+
+  const textModels = useMemo(() => {
+    const hasGoogle = store.textModels.some((m) => m.provider === 'google');
+    if (hasGoogle) return store.textModels;
+    return [...store.textModels, ...defaultTextModels.filter((m) => m.provider === 'google')];
+  }, [store.textModels]);
+
   return {
-    imageModels: store.imageModels,
-    textModels: store.textModels,
+    imageModels,
+    textModels,
     audioModels: store.audioModels,
     videoModels: store.videoModels,
     isLoading: store.isLoading,
