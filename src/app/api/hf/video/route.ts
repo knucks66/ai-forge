@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
     const hf = new HfInference(token);
     const result = await hf.textToVideo({
       model: model || 'ali-vilab/text-to-video-ms-1.7b',
+      provider: 'hf-inference',
       inputs: prompt,
     });
 

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const hf = new HfInference(token);
     const result = await hf.imageToImage({
       model: model || 'black-forest-labs/FLUX.2-dev',
+      provider: 'hf-inference',
       inputs: image,
       parameters: {
         prompt,

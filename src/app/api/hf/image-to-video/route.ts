@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     if (prompt) {
       result = await hf.imageToVideo({
         model: model || 'stabilityai/stable-video-diffusion-img2vid-xt',
+        provider: 'hf-inference',
         inputs: image,
         parameters: {
           prompt,
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     } else {
       result = await hf.imageToVideo({
         model: model || 'stabilityai/stable-video-diffusion-img2vid-xt',
+        provider: 'hf-inference',
         inputs: image,
       });
     }

@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     const hf = new HfInference(token);
     const result = await hf.textToImage({
       model: model || 'stabilityai/stable-diffusion-xl-base-1.0',
+      provider: 'hf-inference',
       inputs: prompt,
       parameters: {
         negative_prompt: negativePrompt || undefined,

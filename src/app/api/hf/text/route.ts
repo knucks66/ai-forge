@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     const hf = new HfInference(token);
     const stream = hf.chatCompletionStream({
       model: model || 'mistralai/Mistral-7B-Instruct-v0.3',
+      provider: 'hf-inference',
       messages,
       temperature: temperature || 0.7,
       max_tokens: maxTokens || 2048,
