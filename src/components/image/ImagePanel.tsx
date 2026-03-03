@@ -271,9 +271,7 @@ export function ImagePanel() {
             store.setProvider(provider);
           }}
           requiredCapability={
-            store.mode === 'image-to-image' && store.provider === 'pollinations'
-              ? 'supportsImageInput'
-              : undefined
+            store.mode === 'image-to-image' ? 'supportsImageInput' : undefined
           }
         />
 

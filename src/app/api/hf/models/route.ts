@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       id: m.modelId || m.id,
       name: (m.modelId as string || m.id as string || '').split('/').pop(),
       provider: 'huggingface',
-      type: task === 'text-to-image' ? 'image' : task === 'text-generation' ? 'text' : task === 'text-to-video' ? 'video' : 'text',
+      type: task === 'text-to-image' || task === 'image-to-image' ? 'image' : task === 'text-to-video' || task === 'image-to-video' ? 'video' : task === 'text-generation' ? 'text' : 'text',
       description: (m.description || '').slice(0, 100),
       tags: m.tags || [],
     }));

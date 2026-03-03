@@ -31,6 +31,8 @@ export function useModels() {
         hfImageModels,
         hfTextModels,
         hfVideoModels,
+        hfImg2ImgModels,
+        hfImg2VidModels,
       ] = await Promise.allSettled([
         fetchPollinationsModels('image'),
         fetchPollinationsModels('text'),
@@ -38,6 +40,8 @@ export function useModels() {
         fetchHfModels('text-to-image', hfToken || undefined),
         fetchHfModels('text-generation', hfToken || undefined),
         fetchHfModels('text-to-video', hfToken || undefined),
+        fetchHfModels('image-to-image', hfToken || undefined),
+        fetchHfModels('image-to-video', hfToken || undefined),
       ]);
 
       // Process image models + separate video models from Pollinations
@@ -100,6 +104,29 @@ export function useModels() {
       } else {
         imageModels.push(...defaultImageModels.filter((m) => m.provider === 'huggingface'));
       }
+
+      // Merge HF image-to-image models (add supportsImageInput capability)
+      if (hfImg2ImgModels.status === 'fulfilled' && hfImg2ImgModels.value.length > 0) {
+        const existingIds = new Set(imageModels.filter((m) => m.provider === 'huggingface').map((m) => m.id));
+        for (const m of hfImg2ImgModels.value) {
+          const existing = imageModels.find((im) => im.id === m.id && im.provider === 'huggingface');
+          if (existing) {
+            // Model already present — add capability
+            existing.capabilities = { ...existing.capabilities, supportsImageInput: true };
+          } else {
+            imageModels.push({
+              id: m.id,
+              name: m.name || m.id.split('/').pop() || m.id,
+              provider: 'huggingface',
+              type: 'image',
+              description: m.description,
+              tags: m.tags as string[] | undefined,
+              capabilities: { supportsImageInput: true },
+            });
+          }
+        }
+      }
+
       // Google models — static defaults, no API fetch needed
       imageModels.push(...defaultImageModels.filter((m) => m.provider === 'google'));
       // OpenRouter image models — static defaults
@@ -193,6 +220,27 @@ export function useModels() {
       } else {
         videoModels.push(...defaultVideoModels.filter((m) => m.provider === 'huggingface'));
       }
+
+      // Merge HF image-to-video models (add supportsImageToVideo capability)
+      if (hfImg2VidModels.status === 'fulfilled' && hfImg2VidModels.value.length > 0) {
+        for (const m of hfImg2VidModels.value) {
+          const existing = videoModels.find((vm) => vm.id === m.id && vm.provider === 'huggingface');
+          if (existing) {
+            existing.capabilities = { ...existing.capabilities, supportsImageToVideo: true, supportsVideoOutput: true };
+          } else {
+            videoModels.push({
+              id: m.id,
+              name: m.name || m.id.split('/').pop() || m.id,
+              provider: 'huggingface',
+              type: 'video',
+              description: m.description,
+              tags: m.tags as string[] | undefined,
+              capabilities: { supportsImageToVideo: true, supportsVideoOutput: true },
+            });
+          }
+        }
+      }
+
       store.setVideoModels(videoModels);
 
       // Mark all as freshly fetched
