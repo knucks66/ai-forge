@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, GalleryHorizontalEnd } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { validateImageFile } from '@/lib/utils/image';
+import { GalleryPickerModal } from './GalleryPickerModal';
 import toast from 'react-hot-toast';
 
 interface ImageDropZoneProps {
@@ -24,6 +25,7 @@ export function ImageDropZone({
   compact = false,
 }: ImageDropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
@@ -129,6 +131,19 @@ export function ImageDropZone({
             <span className="text-xs text-center">
               {isDragOver ? 'Drop image here' : 'Drop image or click to upload'}
             </span>
+            {!isDragOver && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGalleryPicker(true);
+                }}
+                className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
+              >
+                <GalleryHorizontalEnd className="w-3.5 h-3.5" />
+                Browse gallery
+              </button>
+            )}
           </div>
         )}
 
@@ -141,6 +156,16 @@ export function ImageDropZone({
           disabled={disabled}
         />
       </div>
+
+      {showGalleryPicker && (
+        <GalleryPickerModal
+          onSelect={(url, blob) => {
+            onImageSet(url, blob);
+            setShowGalleryPicker(false);
+          }}
+          onClose={() => setShowGalleryPicker(false)}
+        />
+      )}
     </div>
   );
 }
