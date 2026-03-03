@@ -27,6 +27,8 @@ interface ImageState {
   strength: number;
   nsfwDetected: boolean;
   nsfwRevealed: boolean;
+  lastImg2ImgModel: string | null;
+  lastImg2ImgProvider: Provider | null;
 
   setPrompt: (prompt: string) => void;
   setNegativePrompt: (prompt: string) => void;
@@ -53,6 +55,7 @@ interface ImageState {
   refineCurrentImage: () => void;
   setNsfwDetected: (detected: boolean) => void;
   setNsfwRevealed: (revealed: boolean) => void;
+  setLastImg2ImgModel: (model: string, provider: Provider) => void;
   reset: () => void;
 }
 
@@ -81,6 +84,8 @@ const initialState = {
   strength: 0.75,
   nsfwDetected: false,
   nsfwRevealed: false,
+  lastImg2ImgModel: null as string | null,
+  lastImg2ImgProvider: null as Provider | null,
 };
 
 export const useImageStore = create<ImageState>()(
@@ -119,6 +124,7 @@ export const useImageStore = create<ImageState>()(
       }),
       setNsfwDetected: (detected) => set({ nsfwDetected: detected }),
       setNsfwRevealed: (revealed) => set({ nsfwRevealed: revealed }),
+      setLastImg2ImgModel: (model, provider) => set({ lastImg2ImgModel: model, lastImg2ImgProvider: provider }),
       refineCurrentImage: () => {
         const state = get();
         if (state.generatedImageUrl && state.generatedImageBlob) {
@@ -148,6 +154,8 @@ export const useImageStore = create<ImageState>()(
         useRandomSeed: state.useRandomSeed,
         showAdvanced: state.showAdvanced,
         strength: state.strength,
+        lastImg2ImgModel: state.lastImg2ImgModel,
+        lastImg2ImgProvider: state.lastImg2ImgProvider,
       }),
     }
   )

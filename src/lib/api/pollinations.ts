@@ -62,6 +62,43 @@ export async function generatePollinationsImage(
   return { url: objectUrl, blob };
 }
 
+export async function generatePollinationsImageToImage(
+  prompt: string,
+  imageBlob: Blob,
+  options: {
+    model?: string;
+    width?: number;
+    height?: number;
+    seed?: number;
+    negative_prompt?: string;
+  } = {}
+): Promise<{ url: string; blob: Blob }> {
+  const formData = new FormData();
+  formData.append('image', imageBlob, 'input.png');
+  formData.append('prompt', prompt);
+  if (options.model) formData.append('model', options.model);
+  if (options.width) formData.append('width', options.width.toString());
+  if (options.height) formData.append('height', options.height.toString());
+  if (options.seed !== undefined && options.seed >= 0) formData.append('seed', options.seed.toString());
+  if (options.negative_prompt) formData.append('negative_prompt', options.negative_prompt);
+
+  const response = await fetch('/api/pollinations/image-to-image', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => null);
+    const msg = errBody?.error || response.statusText;
+    throw new Error(`Pollinations image generation failed: ${msg}`);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  return { url: objectUrl, blob };
+}
+
 export async function generatePollinationsVideo(
   prompt: string,
   options: {

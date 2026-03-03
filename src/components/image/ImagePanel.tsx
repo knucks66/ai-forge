@@ -12,12 +12,11 @@ import { CanvasSizeSelector } from './CanvasSizeSelector';
 import { AdvancedImageControls } from './AdvancedImageControls';
 import { stylePresets } from '@/data/style-presets';
 import { canvasSizes } from '@/data/canvas-sizes';
-import { generatePollinationsImage, fetchPollinationsBalance } from '@/lib/api/pollinations';
+import { generatePollinationsImage, generatePollinationsImageToImage, fetchPollinationsBalance } from '@/lib/api/pollinations';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { generateHfImage, generateHfImageToImage } from '@/lib/api/huggingface';
 import { generateGoogleImage } from '@/lib/api/google';
 import { generateOpenRouterImage } from '@/lib/api/openrouter';
-import { blobToDataUri } from '@/lib/utils/image';
 import { saveGalleryItem, generateThumbnail } from '@/lib/db';
 import { randomSeed } from '@/lib/utils/seed';
 import { cn } from '@/lib/utils/cn';
@@ -25,14 +24,39 @@ import { v4 as uuid } from 'uuid';
 import { Download, RefreshCw, Maximize2, Wand2, Upload, ShieldAlert } from 'lucide-react';
 import { downloadBlob } from '@/lib/utils/download';
 import toast from 'react-hot-toast';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useModels } from '@/lib/hooks/useModels';
 import { validateImageFile } from '@/lib/utils/image';
 import { detectNsfwPrompt, isNsfwPreset } from '@/lib/utils/nsfw-detect';
 
 export function ImagePanel() {
   const store = useImageStore();
   const { hfToken, pollinationsKey, googleApiKey, openRouterApiKey, nsfwEnabled, setNsfwEnabled } = useSettingsStore();
+  const { imageModels } = useModels();
   const [fullscreen, setFullscreen] = useState(false);
+  const prevMode = useRef(store.mode);
+
+  // Auto-select compatible model when entering image-to-image mode
+  useEffect(() => {
+    if (store.mode === 'image-to-image' && prevMode.current !== 'image-to-image') {
+      const compatible = imageModels.filter((m) => m.capabilities?.supportsImageInput);
+      const currentIsCompatible = compatible.some(
+        (m) => m.id === store.model && m.provider === store.provider
+      );
+
+      if (!currentIsCompatible && compatible.length > 0) {
+        // Try last used img2img model first
+        const lastUsed = store.lastImg2ImgModel && store.lastImg2ImgProvider
+          ? compatible.find((m) => m.id === store.lastImg2ImgModel && m.provider === store.lastImg2ImgProvider)
+          : null;
+
+        const pick = lastUsed || compatible[0];
+        store.setModel(pick.id);
+        store.setProvider(pick.provider);
+      }
+    }
+    prevMode.current = store.mode;
+  }, [store.mode, imageModels]);
 
   const handleCanvasDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -101,13 +125,11 @@ export function ImagePanel() {
       if (store.mode === 'image-to-image' && store.inputImageBlob) {
         // Image-to-image generation
         if (store.provider === 'pollinations') {
-          const imageDataUri = await blobToDataUri(store.inputImageBlob);
-          result = await generatePollinationsImage(fullPrompt, {
+          result = await generatePollinationsImageToImage(fullPrompt, store.inputImageBlob, {
             model: store.model,
             width: store.width,
             height: store.height,
             seed,
-            image: imageDataUri,
             negative_prompt: effectiveNegative || undefined,
           });
         } else {
@@ -151,6 +173,9 @@ export function ImagePanel() {
       store.setGeneratedImageUrl(result.url);
       store.setGeneratedImageBlob(result.blob);
       if (!store.useRandomSeed) store.setSeed(seed);
+      if (store.mode === 'image-to-image') {
+        store.setLastImg2ImgModel(store.model, store.provider);
+      }
 
       // Save to gallery
       const thumbnail = await generateThumbnail(result.blob);
