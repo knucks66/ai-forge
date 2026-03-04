@@ -3,27 +3,31 @@ import { NextRequest, NextResponse } from 'next/server';
 const POLLINATIONS_BASE = 'https://gen.pollinations.ai';
 
 /**
- * Upload image to a temporary file host and return the URL.
- * Uses 0x0.st which accepts anonymous uploads and returns a plain-text URL.
+ * Upload image to Pollinations' own media hosting service.
+ * Returns a publicly accessible URL that the image generation endpoint can use.
  */
-async function uploadToTempHost(imageBlob: Blob, filename: string): Promise<string> {
+async function uploadToPollinationsMedia(imageBlob: Blob, authHeader: string | null): Promise<string> {
   const form = new FormData();
-  form.append('file', imageBlob, filename);
+  form.append('file', imageBlob, 'input.png');
 
-  const res = await fetch('https://0x0.st', {
+  const headers: Record<string, string> = {};
+  if (authHeader) headers['Authorization'] = authHeader;
+
+  const res = await fetch('https://media.pollinations.ai/upload', {
     method: 'POST',
+    headers,
     body: form,
   });
 
   if (!res.ok) {
-    throw new Error('Failed to upload image to temporary host');
+    throw new Error('Failed to upload image to Pollinations media service');
   }
 
-  const url = (await res.text()).trim();
-  if (!url.startsWith('http')) {
-    throw new Error('Invalid response from temporary host');
+  const data = await res.json();
+  if (!data.url) {
+    throw new Error('No URL returned from media upload');
   }
-  return url;
+  return data.url;
 }
 
 export async function POST(req: NextRequest) {
@@ -41,8 +45,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Image and prompt are required' }, { status: 400 });
     }
 
-    // Upload image to get a publicly accessible URL
-    const imageUrl = await uploadToTempHost(imageFile, 'input.png');
+    // Forward auth header if present
+    const authHeader = req.headers.get('authorization');
+
+    // Upload image to Pollinations media service to get a publicly accessible URL
+    const imageUrl = await uploadToPollinationsMedia(imageFile, authHeader);
 
     // Build Pollinations request
     const params = new URLSearchParams();
@@ -57,8 +64,6 @@ export async function POST(req: NextRequest) {
     const encodedPrompt = encodeURIComponent(prompt);
     const pollinationsUrl = `${POLLINATIONS_BASE}/image/${encodedPrompt}?${params.toString()}`;
 
-    // Forward auth header if present
-    const authHeader = req.headers.get('authorization');
     const headers: Record<string, string> = {};
     if (authHeader) headers['Authorization'] = authHeader;
 
