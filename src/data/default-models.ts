@@ -60,5 +60,4 @@ export const defaultVideoModels: ModelOption[] = [
   { id: 'veo', name: 'Veo', provider: 'pollinations', type: 'video', tags: ['pollinations', 'google'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
   { id: 'grok-video', name: 'Grok Video', provider: 'pollinations', type: 'video', tags: ['pollinations', 'xai'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
   { id: 'ltx-2', name: 'LTX-2', provider: 'pollinations', type: 'video', tags: ['pollinations'], capabilities: { supportsVideoOutput: true, supportsImageToVideo: true, supportedVideoParams: { duration: true, aspectRatio: true, audio: true } } },
-  { id: 'ali-vilab/text-to-video-ms-1.7b', name: 'Text-to-Video 1.7B', provider: 'huggingface', type: 'video', tags: ['experimental'], capabilities: { supportsVideoOutput: true } },
 ];

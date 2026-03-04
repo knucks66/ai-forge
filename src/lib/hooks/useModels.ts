@@ -32,9 +32,7 @@ export function useModels() {
         pollinationsAudioModels,
         hfImageModels,
         hfTextModels,
-        hfVideoModels,
         hfImg2ImgModels,
-        hfImg2VidModels,
         googleModelsResult,
       ] = await Promise.allSettled([
         fetchPollinationsModels('image'),
@@ -42,9 +40,7 @@ export function useModels() {
         fetchPollinationsModels('audio'),
         fetchHfModels('text-to-image', hfToken || undefined),
         fetchHfModels('text-generation', hfToken || undefined),
-        fetchHfModels('text-to-video', hfToken || undefined),
         fetchHfModels('image-to-image', hfToken || undefined),
-        fetchHfModels('image-to-video', hfToken || undefined),
         googleApiKey ? fetchGoogleModels(googleApiKey) : Promise.resolve([]),
       ]);
 
@@ -239,44 +235,8 @@ export function useModels() {
         videoModels.push(...defaultVideoModels.filter((m) => m.provider === 'pollinations'));
       }
 
-      if (hfVideoModels.status === 'fulfilled' && hfVideoModels.value.length > 0) {
-        videoModels.push(
-          ...hfVideoModels.value.map((m) => {
-            const caps = getHfCapabilities(m.id, 'text-to-video');
-            return {
-              id: m.id,
-              name: m.name || m.id.split('/').pop() || m.id,
-              provider: 'huggingface' as const,
-              type: 'video' as const,
-              description: m.description,
-              tags: m.tags as string[] | undefined,
-              capabilities: Object.keys(caps).length > 0 ? caps : undefined,
-            };
-          })
-        );
-      } else {
-        videoModels.push(...defaultVideoModels.filter((m) => m.provider === 'huggingface'));
-      }
-
-      // Merge HF image-to-video models (add supportsImageToVideo capability)
-      if (hfImg2VidModels.status === 'fulfilled' && hfImg2VidModels.value.length > 0) {
-        for (const m of hfImg2VidModels.value) {
-          const existing = videoModels.find((vm) => vm.id === m.id && vm.provider === 'huggingface');
-          if (existing) {
-            existing.capabilities = { ...existing.capabilities, supportsImageToVideo: true, supportsVideoOutput: true };
-          } else {
-            videoModels.push({
-              id: m.id,
-              name: m.name || m.id.split('/').pop() || m.id,
-              provider: 'huggingface',
-              type: 'video',
-              description: m.description,
-              tags: m.tags as string[] | undefined,
-              capabilities: { supportsImageToVideo: true, supportsVideoOutput: true },
-            });
-          }
-        }
-      }
+      // HF inference API does not support text-to-video or image-to-video tasks,
+      // so we only include HF default video models as non-functional fallbacks are excluded.
 
       store.setVideoModels(videoModels);
 
