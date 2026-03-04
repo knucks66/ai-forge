@@ -11,7 +11,7 @@ import { generateHfVideo, generateHfImageToVideo } from '@/lib/api/huggingface';
 import { generatePollinationsVideo, fetchPollinationsBalance } from '@/lib/api/pollinations';
 import { useBalanceStore } from '@/stores/useBalanceStore';
 import { blobToDataUri } from '@/lib/utils/image';
-import { saveGalleryItem } from '@/lib/db';
+import { saveGalleryItem, generateVideoThumbnail } from '@/lib/db';
 import { downloadBlob } from '@/lib/utils/download';
 import { v4 as uuid } from 'uuid';
 import { Download, AlertTriangle, Film } from 'lucide-react';
@@ -83,6 +83,9 @@ export function VideoPanel() {
       store.setVideoBlob(result.blob);
       store.setProgress(100);
 
+      // Extract a thumbnail frame from the video
+      const thumbnail = await generateVideoThumbnail(result.blob);
+
       // Save to gallery
       await saveGalleryItem({
         id: uuid(),
@@ -100,6 +103,7 @@ export function VideoPanel() {
           audio: store.provider === 'pollinations' ? store.audio : undefined,
         },
         outputBlob: result.blob,
+        thumbnail,
         inputImageBlob: store.mode === 'image-to-video' ? store.inputImageBlob ?? undefined : undefined,
         createdAt: Date.now(),
         durationMs: Date.now() - startTime,

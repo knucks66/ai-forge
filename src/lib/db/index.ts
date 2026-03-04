@@ -106,3 +106,47 @@ export async function generateThumbnail(blob: Blob, maxSize: number = 200): Prom
     img.src = URL.createObjectURL(blob);
   });
 }
+
+export async function generateVideoThumbnail(blob: Blob, maxSize: number = 200): Promise<Blob | undefined> {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+
+    const url = URL.createObjectURL(blob);
+    video.src = url;
+
+    // Grab a frame once the video has seeked to 1s (or start if shorter)
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(1, video.duration / 2);
+    };
+
+    video.onseeked = () => {
+      const canvas = document.createElement('canvas');
+      const scale = Math.min(maxSize / video.videoWidth, maxSize / video.videoHeight);
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (thumbBlob) => {
+          URL.revokeObjectURL(url);
+          resolve(thumbBlob || undefined);
+        },
+        'image/jpeg',
+        0.7,
+      );
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(undefined);
+    };
+
+    // Timeout fallback in case events never fire
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      resolve(undefined);
+    }, 5000);
+  });
+}
