@@ -1,50 +1,33 @@
 'use client';
 
-import { voices } from '@/data/voices';
-import { cn } from '@/lib/utils/cn';
-import { User, Users } from 'lucide-react';
+import { getVoicesForModel } from '@/data/voices';
 
 interface VoiceSelectorProps {
   selected: string;
   onSelect: (voiceId: string) => void;
+  modelId: string;
+  disabled?: boolean;
 }
 
-export function VoiceSelector({ selected, onSelect }: VoiceSelectorProps) {
+export function VoiceSelector({ selected, onSelect, modelId, disabled }: VoiceSelectorProps) {
+  const availableVoices = getVoicesForModel(modelId);
+
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-muted">Voice</label>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {voices.map((voice) => (
-          <button
-            key={voice.id}
-            onClick={() => onSelect(voice.id)}
-            className={cn(
-              'flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all',
-              selected === voice.id
-                ? 'border-accent bg-accent/10 shadow-sm'
-                : 'border-border hover:border-accent/50 hover:bg-surface-hover'
-            )}
-          >
-            <div className="flex items-center gap-2 w-full">
-              <div className={cn(
-                'w-6 h-6 rounded-full flex items-center justify-center text-xs',
-                voice.gender === 'female' ? 'bg-pink-500/15 text-pink-400' :
-                voice.gender === 'male' ? 'bg-blue-500/15 text-blue-400' :
-                'bg-purple-500/15 text-purple-400'
-              )}>
-                {voice.gender === 'neutral' ? <Users className="w-3 h-3" /> : <User className="w-3 h-3" />}
-              </div>
-              <span className={cn(
-                'text-sm font-medium',
-                selected === voice.id ? 'text-accent' : 'text-foreground'
-              )}>
-                {voice.name}
-              </span>
-            </div>
-            <p className="text-xs text-muted leading-tight">{voice.description}</p>
-          </button>
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-muted">Voice</label>
+      <select
+        value={selected}
+        onChange={(e) => onSelect(e.target.value)}
+        disabled={disabled}
+        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm appearance-none focus:outline-none focus:border-accent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {availableVoices.map((voice) => (
+          <option key={voice.id} value={voice.id}>
+            {voice.name} — {voice.description} ({voice.gender})
+          </option>
         ))}
-      </div>
+      </select>
+      <p className="text-[10px] text-muted">{availableVoices.length} voices available</p>
     </div>
   );
 }

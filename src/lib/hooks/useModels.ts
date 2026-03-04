@@ -3,13 +3,13 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { useModelsStore } from '@/stores/useModelsStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { fetchPollinationsModels } from '@/lib/api/pollinations';
+import { fetchPollinationsModels, fetchPollinationsAudioModels } from '@/lib/api/pollinations';
 import { fetchHfModels } from '@/lib/api/huggingface';
 import { fetchGoogleModels } from '@/lib/api/google';
 import { ModelOption } from '@/types/models';
 import { defaultImageModels, defaultTextModels, defaultAudioModels, defaultVideoModels } from '@/data/default-models';
 import { GenerationType } from '@/types/generation';
-import { getPollinationsCapabilities, getHfCapabilities, POLLINATIONS_VIDEO_MODELS } from '@/data/model-capabilities';
+import { getPollinationsCapabilities, getHfCapabilities, POLLINATIONS_VIDEO_MODELS, AUDIO_TTS_MODELS, AUDIO_MUSIC_MODELS } from '@/data/model-capabilities';
 
 /**
  * Hook that auto-fetches models from Pollinations and HuggingFace APIs.
@@ -37,7 +37,7 @@ export function useModels() {
       ] = await Promise.allSettled([
         fetchPollinationsModels('image'),
         fetchPollinationsModels('text'),
-        fetchPollinationsModels('audio'),
+        fetchPollinationsAudioModels(),
         fetchHfModels('text-to-image', hfToken || undefined),
         fetchHfModels('text-generation', hfToken || undefined),
         fetchHfModels('image-to-image', hfToken || undefined),
@@ -205,20 +205,21 @@ export function useModels() {
       textModels.push(...defaultTextModels.filter((m) => m.provider === 'openrouter'));
       store.setTextModels(textModels);
 
-      // Process audio models
+      // Process audio models (TTS + Music, excluding STT)
       const audioModels: ModelOption[] = [];
       if (pollinationsAudioModels.status === 'fulfilled' && pollinationsAudioModels.value.length > 0) {
-        audioModels.push(
-          ...pollinationsAudioModels.value.map((modelInfo) => ({
+        for (const modelInfo of pollinationsAudioModels.value) {
+          const isMusic = AUDIO_MUSIC_MODELS.has(modelInfo.id);
+          audioModels.push({
             id: modelInfo.id,
             name: modelInfo.name || formatModelName(modelInfo.id),
             provider: 'pollinations' as const,
             type: 'audio' as const,
-            tags: [] as string[],
+            tags: isMusic ? ['music'] : ['tts'],
             paidOnly: modelInfo.paid_only,
             costsCredits: modelInfo.costsCredits,
-          }))
-        );
+          });
+        }
       } else {
         audioModels.push(...defaultAudioModels);
       }

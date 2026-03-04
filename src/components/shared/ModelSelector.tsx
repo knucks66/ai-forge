@@ -17,6 +17,7 @@ interface ModelSelectorProps {
   onSelect: (model: string, provider: Provider) => void;
   className?: string;
   requiredCapability?: keyof ModelCapabilities;
+  filterTag?: string;
 }
 
 export function ModelSelector({
@@ -26,6 +27,7 @@ export function ModelSelector({
   onSelect,
   className,
   requiredCapability,
+  filterTag,
 }: ModelSelectorProps) {
   const { imageModels: hookImageModels, textModels: hookTextModels, audioModels: hookAudioModels, videoModels: hookVideoModels, refresh, isLoading } = useModels();
   const balanceStore = useBalanceStore();
@@ -41,6 +43,11 @@ export function ModelSelector({
   // Filter by required capability if specified
   if (requiredCapability) {
     models = models.filter((m) => m.capabilities?.[requiredCapability]);
+  }
+
+  // Filter by tag if specified (e.g., 'tts' or 'music' for audio models)
+  if (filterTag) {
+    models = models.filter((m) => m.tags?.includes(filterTag));
   }
 
   const pollinationsModels = models.filter((m) => m.provider === 'pollinations');

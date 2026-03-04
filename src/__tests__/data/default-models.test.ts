@@ -67,6 +67,22 @@ describe('defaultVideoModels', () => {
   });
 });
 
+describe('defaultAudioModels', () => {
+  it('includes both TTS and music models', () => {
+    const ttsTags = defaultAudioModels.filter((m) => m.tags?.includes('tts'));
+    const musicTags = defaultAudioModels.filter((m) => m.tags?.includes('music'));
+    expect(ttsTags.length).toBeGreaterThanOrEqual(1);
+    expect(musicTags.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('includes openai-audio as free TTS', () => {
+    const openai = defaultAudioModels.find((m) => m.id === 'openai-audio');
+    expect(openai).toBeDefined();
+    expect(openai!.tags).toContain('tts');
+    expect(openai!.costsCredits).toBeFalsy();
+  });
+});
+
 describe('image models with capabilities', () => {
   it('known img2img models have supportsImageInput capability', () => {
     const img2imgModels = defaultImageModels.filter((m) => m.capabilities?.supportsImageInput);

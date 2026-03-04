@@ -22,6 +22,7 @@ export interface PollinationsModelInfo {
   output_modalities?: string[];
   paid_only?: boolean;
   costsCredits?: boolean;
+  voices?: string[];
 }
 
 export async function generatePollinationsImage(
@@ -164,13 +165,46 @@ export async function generatePollinationsText(
 
 export async function generatePollinationsAudio(
   text: string,
-  voice: string = 'alloy'
+  voice: string = 'alloy',
+  options: {
+    model?: string;
+    format?: string;
+  } = {}
 ): Promise<{ url: string; blob: Blob }> {
   const encodedText = encodeURIComponent(text);
-  const url = `${BASE_URL}/text/${encodedText}?model=openai-audio&voice=${voice}`;
+  const params = new URLSearchParams();
+  params.set('model', options.model || 'openai-audio');
+  params.set('voice', voice);
+  if (options.format && options.format !== 'mp3') params.set('response_format', options.format);
+
+  const url = `${BASE_URL}/text/${encodedText}?${params.toString()}`;
 
   const response = await fetch(url, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error(`Pollinations audio generation failed: ${response.statusText}`);
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  return { url: objectUrl, blob };
+}
+
+export async function generatePollinationsMusic(
+  prompt: string,
+  options: {
+    model?: string;
+    duration?: number;
+    format?: string;
+  } = {}
+): Promise<{ url: string; blob: Blob }> {
+  const encodedPrompt = encodeURIComponent(prompt);
+  const params = new URLSearchParams();
+  params.set('model', options.model || 'suno');
+  if (options.duration) params.set('duration', options.duration.toString());
+  if (options.format && options.format !== 'mp3') params.set('response_format', options.format);
+
+  const url = `${BASE_URL}/text/${encodedPrompt}?${params.toString()}`;
+
+  const response = await fetch(url, { headers: getAuthHeaders() });
+  if (!response.ok) throw new Error(`Pollinations music generation failed: ${response.statusText}`);
 
   const blob = await response.blob();
   const objectUrl = URL.createObjectURL(blob);
@@ -194,6 +228,84 @@ export async function fetchPollinationsProfile(): Promise<{ tier?: string; next_
     return res.json();
   } catch {
     return null;
+  }
+}
+
+/**
+ * Fetch audio models from the dedicated /audio/models endpoint,
+ * plus openai-audio from the general /models endpoint (since it only appears there).
+ * Filters out STT models (whisper, scribe) which have audio input modality.
+ */
+export async function fetchPollinationsAudioModels(): Promise<PollinationsModelInfo[]> {
+  try {
+    const [audioRes, generalRes] = await Promise.allSettled([
+      fetch(`${BASE_URL}/audio/models`, { headers: getAuthHeaders() }),
+      fetch(`${BASE_URL}/models`, { headers: getAuthHeaders() }),
+    ]);
+
+    const models: PollinationsModelInfo[] = [];
+
+    // Parse dedicated audio models
+    if (audioRes.status === 'fulfilled' && audioRes.value.ok) {
+      const data = await audioRes.value.json();
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (typeof item !== 'object' || !item) continue;
+          const raw = item as Record<string, unknown>;
+          // Skip STT models (audio input = speech-to-text)
+          const inputMods = raw.input_modalities as string[] | undefined;
+          if (inputMods?.includes('audio') && !inputMods?.includes('text')) continue;
+          // Also skip by known STT IDs
+          const id = (raw.name as string) || '';
+          if (['whisper', 'scribe'].includes(id)) continue;
+
+          const pricing = raw.pricing as Record<string, unknown> | undefined;
+          const costsCredits = pricing
+            ? Object.entries(pricing).some(([k, v]) => k !== 'currency' && typeof v === 'number' && v > 0)
+            : false;
+
+          models.push({
+            id,
+            name: (raw.description as string) || id,
+            input_modalities: inputMods,
+            output_modalities: raw.output_modalities as string[] | undefined,
+            costsCredits,
+            voices: raw.voices as string[] | undefined,
+          });
+        }
+      }
+    }
+
+    // Find openai-audio from general /models (it's not in /audio/models)
+    if (generalRes.status === 'fulfilled' && generalRes.value.ok) {
+      const data = await generalRes.value.json();
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (typeof item !== 'object' || !item) continue;
+          const raw = item as Record<string, unknown>;
+          const id = (raw.name as string) || '';
+          if (id === 'openai-audio') {
+            const pricing = raw.pricing as Record<string, unknown> | undefined;
+            const costsCredits = pricing
+              ? Object.entries(pricing).some(([k, v]) => k !== 'currency' && typeof v === 'number' && v > 0)
+              : false;
+            models.unshift({
+              id,
+              name: (raw.description as string) || 'OpenAI TTS',
+              input_modalities: raw.input_modalities as string[] | undefined,
+              output_modalities: raw.output_modalities as string[] | undefined,
+              costsCredits,
+              voices: raw.voices as string[] | undefined,
+            });
+            break;
+          }
+        }
+      }
+    }
+
+    return models;
+  } catch {
+    return [];
   }
 }
 

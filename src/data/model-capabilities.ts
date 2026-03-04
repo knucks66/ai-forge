@@ -23,6 +23,15 @@ export const POLLINATIONS_VIDEO_MODELS = new Set([
   'ltx-2',
 ]);
 
+/** Audio TTS model IDs */
+export const AUDIO_TTS_MODELS = new Set(['openai-audio', 'elevenlabs']);
+
+/** Audio Music generation model IDs */
+export const AUDIO_MUSIC_MODELS = new Set(['suno', 'elevenmusic']);
+
+/** Audio STT model IDs (excluded from UI) */
+export const AUDIO_STT_MODELS = new Set(['whisper', 'scribe']);
+
 /** HuggingFace models known to support imageTextToImage */
 export const HF_IMAGE_INPUT_MODELS = new Set([
   'black-forest-labs/FLUX.2-dev',

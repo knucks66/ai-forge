@@ -51,6 +51,9 @@ export const defaultTextModels: ModelOption[] = [
 
 export const defaultAudioModels: ModelOption[] = [
   { id: 'openai-audio', name: 'OpenAI TTS', provider: 'pollinations', type: 'audio', tags: ['tts'] },
+  { id: 'elevenlabs', name: 'ElevenLabs TTS', provider: 'pollinations', type: 'audio', tags: ['tts'], costsCredits: true },
+  { id: 'elevenmusic', name: 'ElevenLabs Music', provider: 'pollinations', type: 'audio', tags: ['music'], costsCredits: true },
+  { id: 'suno', name: 'Suno v5', provider: 'pollinations', type: 'audio', tags: ['music'], costsCredits: true },
 ];
 
 export const defaultVideoModels: ModelOption[] = [

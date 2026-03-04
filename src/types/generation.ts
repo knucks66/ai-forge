@@ -16,6 +16,10 @@ export interface GenerationParams {
   maxTokens?: number;
   topP?: number;
   voice?: string;
+  audioMode?: AudioGenerationMode;
+  audioFormat?: AudioFormat;
+  audioDuration?: number;
+  genreTags?: string[];
   inputImageBlob?: Blob;
   strength?: number;
   duration?: number;
@@ -25,6 +29,8 @@ export interface GenerationParams {
 
 export type ImageGenerationMode = 'text-to-image' | 'image-to-image';
 export type VideoGenerationMode = 'text-to-video' | 'image-to-video';
+export type AudioGenerationMode = 'tts' | 'music';
+export type AudioFormat = 'mp3' | 'opus' | 'aac' | 'flac' | 'wav';
 
 export interface GenerationResult {
   id: string;
