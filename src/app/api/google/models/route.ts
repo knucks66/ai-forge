@@ -21,17 +21,24 @@ interface RawGoogleModel {
 async function probeFreeTier(
   modelId: string,
   apiKey: string,
+  isImageModel: boolean,
 ): Promise<{ modelId: string; freeTier: boolean | null }> {
   try {
+    // Image models need responseModalities: ['TEXT','IMAGE'] to trigger the
+    // image-generation quota. A text-only probe would hit a different (free) quota.
+    const body: Record<string, unknown> = {
+      contents: [{ parts: [{ text: 'hi' }] }],
+      generationConfig: isImageModel
+        ? { responseModalities: ['TEXT', 'IMAGE'] }
+        : { maxOutputTokens: 1 },
+    };
+
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'hi' }] }],
-          generationConfig: { maxOutputTokens: 1 },
-        }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(15000),
       },
     );
@@ -57,7 +64,7 @@ async function probeFreeTier(
       const hasZeroFreeLimit = violations.some(
         (v) =>
           v.quotaMetric?.includes('free_tier') &&
-          (v.description?.includes('limit: 0') || true),
+          v.description?.includes('limit: 0'),
       );
 
       if (hasZeroFreeLimit) {
@@ -110,9 +117,10 @@ export async function GET(req: NextRequest) {
 
     // 3. Probe every model for free-tier availability (parallel, per-request timeout)
     const probeResults = await Promise.allSettled(
-      contentModels.map((m) =>
-        probeFreeTier(m.name.replace('models/', ''), apiKey),
-      ),
+      contentModels.map((m) => {
+        const id = m.name.replace('models/', '');
+        return probeFreeTier(id, apiKey, id.includes('image'));
+      }),
     );
 
     const freeTierMap = new Map<string, boolean | null>();
