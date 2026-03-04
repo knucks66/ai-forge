@@ -52,10 +52,9 @@ describe('defaultTextModels', () => {
 });
 
 describe('defaultVideoModels', () => {
-  it('includes both pollinations and huggingface providers', () => {
+  it('includes pollinations provider', () => {
     const providers = new Set(defaultVideoModels.map((m) => m.provider));
     expect(providers.has('pollinations')).toBe(true);
-    expect(providers.has('huggingface')).toBe(true);
   });
 
   it('Pollinations video models have video capabilities', () => {

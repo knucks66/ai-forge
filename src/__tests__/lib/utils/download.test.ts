@@ -20,8 +20,8 @@ describe('downloadBlob', () => {
     } as unknown as HTMLAnchorElement);
     createObjectURLSpy = vi.fn(() => 'blob:mock-url');
     revokeObjectURLSpy = vi.fn();
-    URL.createObjectURL = createObjectURLSpy;
-    URL.revokeObjectURL = revokeObjectURLSpy;
+    URL.createObjectURL = createObjectURLSpy as typeof URL.createObjectURL;
+    URL.revokeObjectURL = revokeObjectURLSpy as typeof URL.revokeObjectURL;
   });
 
   it('creates an object URL, clicks the anchor, and cleans up', () => {
