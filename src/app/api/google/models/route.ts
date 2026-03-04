@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PROBE_TIMEOUT = 8000;
-
 interface RawGoogleModel {
   name: string;
   displayName?: string;
@@ -23,7 +21,6 @@ interface RawGoogleModel {
 async function probeFreeTier(
   modelId: string,
   apiKey: string,
-  signal: AbortSignal,
 ): Promise<{ modelId: string; freeTier: boolean | null }> {
   try {
     const res = await fetch(
@@ -35,7 +32,7 @@ async function probeFreeTier(
           contents: [{ parts: [{ text: 'hi' }] }],
           generationConfig: { maxOutputTokens: 1 },
         }),
-        signal,
+        signal: AbortSignal.timeout(15000),
       },
     );
 
@@ -43,6 +40,15 @@ async function probeFreeTier(
 
     if (res.status === 429) {
       const err = await res.json().catch(() => ({}));
+      const message: string = err.error?.message || '';
+
+      // Check top-level error message for "free_tier" + "limit: 0"
+      // Google formats it as: "Quota exceeded for metric: .../free_tier_requests, limit: 0, model: ..."
+      if (message.includes('free_tier') && message.includes('limit: 0')) {
+        return { modelId, freeTier: false };
+      }
+
+      // Also check violation details as fallback
       const violations: { quotaMetric?: string; description?: string }[] =
         err.error?.details?.find(
           (d: { '@type'?: string }) => d['@type']?.includes('QuotaFailure'),
@@ -51,10 +57,20 @@ async function probeFreeTier(
       const hasZeroFreeLimit = violations.some(
         (v) =>
           v.quotaMetric?.includes('free_tier') &&
-          v.description?.includes('limit: 0'),
+          (v.description?.includes('limit: 0') || true),
       );
 
-      return { modelId, freeTier: hasZeroFreeLimit ? false : true };
+      if (hasZeroFreeLimit) {
+        return { modelId, freeTier: false };
+      }
+
+      // 429 with free_tier mention but limit > 0 → has free tier, just rate-limited
+      if (message.includes('free_tier')) {
+        return { modelId, freeTier: true };
+      }
+
+      // Generic rate limiting — can't determine
+      return { modelId, freeTier: null };
     }
 
     // 400 / 403 / other – can't determine tier
@@ -92,16 +108,12 @@ export async function GET(req: NextRequest) {
       m.supportedGenerationMethods?.includes('generateContent'),
     );
 
-    // 3. Probe every model for free-tier availability (parallel, with timeout)
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT);
-
+    // 3. Probe every model for free-tier availability (parallel, per-request timeout)
     const probeResults = await Promise.allSettled(
       contentModels.map((m) =>
-        probeFreeTier(m.name.replace('models/', ''), apiKey, controller.signal),
+        probeFreeTier(m.name.replace('models/', ''), apiKey),
       ),
     );
-    clearTimeout(timer);
 
     const freeTierMap = new Map<string, boolean | null>();
     for (const result of probeResults) {

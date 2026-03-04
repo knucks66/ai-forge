@@ -143,7 +143,7 @@ export function useModels() {
               type: 'image' as const,
               description: m.description,
               tags: ['google'] as string[],
-              paidOnly: m.freeTier === false,
+              paidOnly: m.freeTier !== true,
               capabilities: { supportsImageInput: true },
             })),
         );
@@ -197,7 +197,7 @@ export function useModels() {
               type: 'text' as const,
               description: m.description,
               tags: ['google'] as string[],
-              paidOnly: m.freeTier === false,
+              paidOnly: m.freeTier !== true,
             })),
         );
       } else {
