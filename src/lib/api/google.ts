@@ -1,3 +1,26 @@
+export interface GoogleModelInfo {
+  id: string;
+  name: string;
+  description: string;
+  type: 'text' | 'image';
+  freeTier: boolean | null;
+  inputTokenLimit?: number;
+  outputTokenLimit?: number;
+}
+
+export async function fetchGoogleModels(apiKey: string): Promise<GoogleModelInfo[]> {
+  const res = await fetch('/api/google/models', {
+    headers: { 'x-google-api-key': apiKey },
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch Google models');
+  }
+
+  const data = await res.json();
+  return data.models || [];
+}
+
 export async function generateGoogleText(
   messages: Array<{ role: string; content: string }>,
   apiKey: string,

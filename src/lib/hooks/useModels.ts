@@ -5,6 +5,7 @@ import { useModelsStore } from '@/stores/useModelsStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { fetchPollinationsModels } from '@/lib/api/pollinations';
 import { fetchHfModels } from '@/lib/api/huggingface';
+import { fetchGoogleModels } from '@/lib/api/google';
 import { ModelOption } from '@/types/models';
 import { defaultImageModels, defaultTextModels, defaultAudioModels, defaultVideoModels } from '@/data/default-models';
 import { GenerationType } from '@/types/generation';
@@ -18,6 +19,7 @@ import { getPollinationsCapabilities, getHfCapabilities, POLLINATIONS_VIDEO_MODE
 export function useModels() {
   const store = useModelsStore();
   const hfToken = useSettingsStore((s) => s.hfToken);
+  const googleApiKey = useSettingsStore((s) => s.googleApiKey);
 
   const fetchAllModels = useCallback(async () => {
     store.setIsLoading(true);
@@ -33,6 +35,7 @@ export function useModels() {
         hfVideoModels,
         hfImg2ImgModels,
         hfImg2VidModels,
+        googleModelsResult,
       ] = await Promise.allSettled([
         fetchPollinationsModels('image'),
         fetchPollinationsModels('text'),
@@ -42,6 +45,7 @@ export function useModels() {
         fetchHfModels('text-to-video', hfToken || undefined),
         fetchHfModels('image-to-image', hfToken || undefined),
         fetchHfModels('image-to-video', hfToken || undefined),
+        googleApiKey ? fetchGoogleModels(googleApiKey) : Promise.resolve([]),
       ]);
 
       // Process image models + separate video models from Pollinations
@@ -127,8 +131,25 @@ export function useModels() {
         }
       }
 
-      // Google models — static defaults, no API fetch needed
-      imageModels.push(...defaultImageModels.filter((m) => m.provider === 'google'));
+      // Google models — dynamically fetched, fallback to defaults
+      if (googleModelsResult.status === 'fulfilled' && googleModelsResult.value.length > 0) {
+        imageModels.push(
+          ...googleModelsResult.value
+            .filter((m) => m.type === 'image')
+            .map((m) => ({
+              id: m.id,
+              name: m.name,
+              provider: 'google' as const,
+              type: 'image' as const,
+              description: m.description,
+              tags: ['google'] as string[],
+              paidOnly: m.freeTier === false,
+              capabilities: { supportsImageInput: true },
+            })),
+        );
+      } else {
+        imageModels.push(...defaultImageModels.filter((m) => m.provider === 'google'));
+      }
       // OpenRouter image models — static defaults
       imageModels.push(...defaultImageModels.filter((m) => m.provider === 'openrouter'));
       store.setImageModels(imageModels);
@@ -164,8 +185,24 @@ export function useModels() {
       } else {
         textModels.push(...defaultTextModels.filter((m) => m.provider === 'huggingface'));
       }
-      // Google models — static defaults, no API fetch needed
-      textModels.push(...defaultTextModels.filter((m) => m.provider === 'google'));
+      // Google models — dynamically fetched, fallback to defaults
+      if (googleModelsResult.status === 'fulfilled' && googleModelsResult.value.length > 0) {
+        textModels.push(
+          ...googleModelsResult.value
+            .filter((m) => m.type === 'text')
+            .map((m) => ({
+              id: m.id,
+              name: m.name,
+              provider: 'google' as const,
+              type: 'text' as const,
+              description: m.description,
+              tags: ['google'] as string[],
+              paidOnly: m.freeTier === false,
+            })),
+        );
+      } else {
+        textModels.push(...defaultTextModels.filter((m) => m.provider === 'google'));
+      }
       // Groq models — static defaults
       textModels.push(...defaultTextModels.filter((m) => m.provider === 'groq'));
       // OpenRouter text models — static defaults
@@ -253,9 +290,9 @@ export function useModels() {
     } finally {
       store.setIsLoading(false);
     }
-  }, [hfToken, store]);
+  }, [hfToken, googleApiKey, store]);
 
-  // Auto-fetch on mount and when token changes, respecting TTL
+  // Auto-fetch on mount and when tokens change, respecting TTL
   useEffect(() => {
     const anyStale =
       store.isStale('image') ||
@@ -266,7 +303,7 @@ export function useModels() {
     if (anyStale) {
       fetchAllModels();
     }
-  }, [hfToken]); // Re-fetch when HF token changes
+  }, [hfToken, googleApiKey]); // Re-fetch when tokens change
 
   // Always ensure static-default providers are present.
   // This handles the case where cached model lists predate newer providers.

@@ -245,10 +245,12 @@ export function ModelSelector({
             <div>
               <div className="sticky top-0 px-3 py-1.5 bg-surface border-b border-border flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Google AI</span>
-                <span className="text-[10px] font-medium text-green-400">Free tier</span>
+                <span className="text-[10px] font-medium text-green-400">API Key</span>
               </div>
               {googleModels.map((m) => {
                 const isSelected = m.id === selectedModel && m.provider === selectedProvider;
+                const tier = getCostTier(m);
+                const badge = getBadge(tier);
                 return (
                   <button
                     key={`g-${m.id}`}
@@ -261,8 +263,11 @@ export function ModelSelector({
                     )}
                   >
                     <span className="flex-1 truncate">{m.name}</span>
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 bg-emerald-500/15 text-emerald-400">
-                      FREE
+                    <span className={cn(
+                      'text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0',
+                      badge.className
+                    )}>
+                      {badge.label}
                     </span>
                   </button>
                 );
