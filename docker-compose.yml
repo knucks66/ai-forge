@@ -1,0 +1,20 @@
+services:
+  ai-forge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3030/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    ports:
+      - "3030:3030"
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    external: true

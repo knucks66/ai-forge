@@ -1,0 +1,66 @@
+name: Deploy AI Forge to Hetzner
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'package.json'
+      - 'next.config.ts'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ai-forge
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Hetzner
+        run: |
+          ssh ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} << 'ENDSSH'
+            set -e
+            cd /opt/ai-forge
+
+            # Force-sync with remote
+            git fetch origin master
+            git reset --hard origin/master
+
+            # Clean up old containers
+            docker compose down --remove-orphans 2>/dev/null || true
+            docker ps -aq --filter "name=ai-forge" | xargs -r docker rm -f 2>/dev/null || true
+
+            # Build and start
+            docker compose up -d --build
+
+            # Wait for container to be ready
+            sleep 15
+
+            echo "Deployment complete!"
+          ENDSSH
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          for i in 1 2 3; do
+            if curl -sf https://ai-forge.rumio.world/api/health > /dev/null 2>&1; then
+              echo "AI Forge is up!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed!"
+          exit 1
